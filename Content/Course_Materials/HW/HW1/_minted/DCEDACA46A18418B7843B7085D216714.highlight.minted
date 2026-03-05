@@ -1,0 +1,47 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{// ==========================================}
+\PYG{c+c1}{// PROBLEM 1: Resizing}
+\PYG{c+c1}{// ==========================================}
+\PYG{n}{cout}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZhy{}\PYGZhy{}\PYGZhy{} Problem 1: Resizing Comparison \PYGZhy{}\PYGZhy{}\PYGZhy{}}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{endl}\PYG{p}{;}
+
+\PYG{c+c1}{// \PYGZhy{}\PYGZhy{}\PYGZhy{} A. Bilinear Interpolation \PYGZhy{}\PYGZhy{}\PYGZhy{}}
+\PYG{c+c1}{// Custom}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{bl\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}bilinear}\PYG{p}{(}\PYG{n}{img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}bl\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}bilinear}\PYG{p}{(}\PYG{n}{bl\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/imageshrunk\PYGZus{}bilinear.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{bl\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/imagerestored\PYGZus{}bilinear.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}bl\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{c+c1}{// OpenCV}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{Mat}\PYG{+w}{ }\PYG{n}{shrunk\PYGZus{}cv\PYGZus{}bl}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}cv}\PYG{p}{(}\PYG{n}{cv\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{,}\PYG{+w}{ }\PYG{n+nb}{true}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{Mat}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}cv\PYGZus{}bl}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}cv}\PYG{p}{(}\PYG{n}{shrunk\PYGZus{}cv\PYGZus{}bl}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{,}\PYG{+w}{ }\PYG{n+nb}{true}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{imwrite}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/cv\PYGZus{}imageshrunk\PYGZus{}bilinear.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{shrunk\PYGZus{}cv\PYGZus{}bl}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{imwrite}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/cv\PYGZus{}imagerestored\PYGZus{}bilinear.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}cv\PYGZus{}bl}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{c+c1}{// Compare}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{Mat}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}custom\PYGZus{}mat\PYGZus{}bl}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{convertBmpToMat}\PYG{p}{(}\PYG{n}{restored\PYGZus{}bl\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+\PYG{k+kt}{double}\PYG{+w}{ }\PYG{n}{mse\PYGZus{}bilinear}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{calculateMSE}\PYG{p}{(}\PYG{n}{restored\PYGZus{}custom\PYGZus{}mat\PYGZus{}bl}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}cv\PYGZus{}bl}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{cout}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{MSE for Bilinear Resizing: }\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{mse\PYGZus{}bilinear}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{endl}\PYG{p}{;}
+
+
+\PYG{c+c1}{// \PYGZhy{}\PYGZhy{}\PYGZhy{} B. Nearest Neighbor Interpolation \PYGZhy{}\PYGZhy{}\PYGZhy{}}
+\PYG{c+c1}{// Custom}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{nn\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}nearest}\PYG{p}{(}\PYG{n}{img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}nn\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}nearest}\PYG{p}{(}\PYG{n}{nn\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/imageshrunk\PYGZus{}nn.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{nn\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/imagerestored\PYGZus{}nn.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}nn\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{c+c1}{// OpenCV}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{Mat}\PYG{+w}{ }\PYG{n}{shrunk\PYGZus{}cv\PYGZus{}nn}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}cv}\PYG{p}{(}\PYG{n}{cv\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{64}\PYG{p}{,}\PYG{+w}{ }\PYG{n+nb}{false}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{Mat}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}cv\PYGZus{}nn}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{resize\PYGZus{}cv}\PYG{p}{(}\PYG{n}{shrunk\PYGZus{}cv\PYGZus{}nn}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{256}\PYG{p}{,}\PYG{+w}{ }\PYG{n+nb}{false}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{imwrite}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/cv\PYGZus{}imageshrunk\PYGZus{}nn.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{shrunk\PYGZus{}cv\PYGZus{}nn}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{imwrite}\PYG{p}{(}\PYG{n}{basePath}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem1/cv\PYGZus{}imagerestored\PYGZus{}nn.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}cv\PYGZus{}nn}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{c+c1}{// Compare}
+\PYG{n}{cv}\PYG{o}{:}\PYG{o}{:}\PYG{n}{Mat}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}custom\PYGZus{}mat\PYGZus{}nn}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{convertBmpToMat}\PYG{p}{(}\PYG{n}{restored\PYGZus{}nn\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{cout}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{MSE for NN: }\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{calculateMSE}\PYG{p}{(}\PYG{n}{restored\PYGZus{}custom\PYGZus{}mat\PYGZus{}nn}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{restored\PYGZus{}cv\PYGZus{}nn}\PYG{p}{)}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{endl}\PYG{p}{;}
+
+\end{MintedVerbatim}

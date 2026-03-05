@@ -1,0 +1,6 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{n+nb}{cd}\PYG{+w}{ }build
+cmake\PYG{+w}{ }..
+cmake\PYG{+w}{ }\PYGZhy{}\PYGZhy{}build\PYG{+w}{ }.
+./imgPrcsng
+\end{MintedVerbatim}

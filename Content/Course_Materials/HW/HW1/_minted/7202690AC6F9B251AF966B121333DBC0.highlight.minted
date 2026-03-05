@@ -1,0 +1,24 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{n+nb}{cmake\PYGZus{}minimum\PYGZus{}required}\PYG{p}{(}\PYG{l+s}{VERSION}\PYG{+w}{ }\PYG{l+s}{3.31}\PYG{p}{)}
+
+\PYG{n+nb}{project}\PYG{p}{(}\PYG{l+s}{imgPrcsng}\PYG{+w}{ }\PYG{l+s}{VERSION}\PYG{+w}{ }\PYG{l+s}{1.0}\PYG{+w}{ }\PYG{l+s}{LANGUAGES}\PYG{+w}{ }\PYG{l+s}{CXX}\PYG{p}{)}
+
+
+\PYG{n+nb}{find\PYGZus{}package}\PYG{p}{(}\PYG{l+s}{OpenCV}\PYG{+w}{ }\PYG{l+s}{REQUIRED}\PYG{p}{)}
+
+\PYG{n+nb}{add\PYGZus{}library}\PYG{p}{(}\PYG{l+s}{AR\PYGZus{}bmp}\PYG{+w}{ }\PYG{l+s}{src/bmp\PYGZus{}handling.cpp}\PYG{p}{)}
+
+\PYG{n+nb}{include\PYGZus{}directories}\PYG{p}{(}\PYG{o}{\PYGZdl{}\PYGZob{}}\PYG{n+nv}{CMAKE\PYGZus{}SOURCE\PYGZus{}DIR}\PYG{o}{\PYGZcb{}}\PYG{l+s}{/include}\PYG{p}{)}
+
+\PYG{n+nb}{set}\PYG{p}{(}\PYG{l+s}{SOURCES}
+
+\PYG{l+s}{main.cpp}
+\PYG{l+s}{src/bmp\PYGZus{}handling.cpp}
+\PYG{l+s}{src/cv\PYGZus{}bridge.cpp}
+\PYG{p}{)}
+
+\PYG{n+nb}{add\PYGZus{}executable}\PYG{p}{(}\PYG{l+s}{imgPrcsng}\PYG{+w}{ }\PYG{o}{\PYGZdl{}\PYGZob{}}\PYG{n+nv}{SOURCES}\PYG{o}{\PYGZcb{}}\PYG{p}{)}
+
+\PYG{n+nb}{target\PYGZus{}include\PYGZus{}directories}\PYG{p}{(}\PYG{l+s}{imgPrcsng}\PYG{+w}{ }\PYG{l+s}{PUBLIC}\PYG{+w}{ }\PYG{l+s}{include}\PYG{+w}{ }\PYG{l+s}{src}\PYG{p}{)}
+\PYG{n+nb}{target\PYGZus{}link\PYGZus{}libraries}\PYG{p}{(}\PYG{l+s}{imgPrcsng}\PYG{+w}{ }\PYG{l+s}{PRIVATE}\PYG{+w}{ }\PYG{l+s}{AR\PYGZus{}bmp}\PYG{+w}{ }\PYG{o}{\PYGZdl{}\PYGZob{}}\PYG{n+nv}{OpenCV\PYGZus{}LIBS}\PYG{o}{\PYGZcb{}}\PYG{p}{)}
+\end{MintedVerbatim}
