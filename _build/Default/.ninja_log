@@ -1,0 +1,27 @@
+# ninja log v6
+3	542	1772843128170304095	CMakeFiles/AR_bmp.dir/src/bmp_handling.cpp.o	833e099a8dd7cdd8
+542	672	1772843128710304690	libAR_bmp.a	50a501c5cc51139f
+6	1199	1772843128174304099	CMakeFiles/imgPrcsng.dir/src/img_manip.cpp.o	ef2ee1beb2741c77
+1	9	1772843128018303928	clean	a31eedcededa8236
+4	610	1772843128170304095	CMakeFiles/imgPrcsng.dir/src/bmp_handling.cpp.o	2c30fc89889b7292
+4	720	1772843128170304095	CMakeFiles/imgPrcsng.dir/main.cpp.o	6aca8ab0aa075758
+13	134	1772843461730746220	build.ninja	2ba37ac2f73b6eb9
+5	3785	1772843128170304095	CMakeFiles/imgPrcsng.dir/src/cv_bridge.cpp.o	59c204cbfb67f6b3
+3785	4176	1772843131950308270	imgPrcsng	8437523f18883f58
+3	101	1772843461730746220	build.ninja	2ba37ac2f73b6eb9
+2	6	1772843461762746268	clean	a31eedcededa8236
+3	414	1772843461934746527	CMakeFiles/AR_bmp.dir/src/bmp_handling.cpp.o	833e099a8dd7cdd8
+4	415	1772843461938746533	CMakeFiles/imgPrcsng.dir/src/bmp_handling.cpp.o	2c30fc89889b7292
+414	501	1772843462346747148	libAR_bmp.a	50a501c5cc51139f
+3	534	1772843461938746533	CMakeFiles/imgPrcsng.dir/main.cpp.o	6aca8ab0aa075758
+4	798	1772843461938746533	CMakeFiles/imgPrcsng.dir/src/img_manip.cpp.o	ef2ee1beb2741c77
+4	1973	1772843461938746533	CMakeFiles/imgPrcsng.dir/src/cv_bridge.cpp.o	59c204cbfb67f6b3
+1973	2139	1772843463906749499	imgPrcsng	8437523f18883f58
+4	16	1772843522650516315	clean	a31eedcededa8236
+5	415	1772843522818510433	CMakeFiles/AR_bmp.dir/src/bmp_handling.cpp.o	833e099a8dd7cdd8
+5	498	1772843522818510433	CMakeFiles/imgPrcsng.dir/main.cpp.o	6aca8ab0aa075758
+415	501	1772843523230496021	libAR_bmp.a	50a501c5cc51139f
+6	785	1772843522818510433	CMakeFiles/imgPrcsng.dir/src/bmp_handling.cpp.o	2c30fc89889b7292
+7	1396	1772843522822510293	CMakeFiles/imgPrcsng.dir/src/img_manip.cpp.o	ef2ee1beb2741c77
+6	3566	1772843522818510433	CMakeFiles/imgPrcsng.dir/src/cv_bridge.cpp.o	59c204cbfb67f6b3
+3566	3822	1772843526382386100	imgPrcsng	8437523f18883f58

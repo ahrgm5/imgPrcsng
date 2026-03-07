@@ -1,4 +1,0 @@
-/home/ahrgm/Projects/submissions/imgPrcsng/build/CMakeFiles/AR_bmp.dir
-/home/ahrgm/Projects/submissions/imgPrcsng/build/CMakeFiles/imgPrcsng.dir
-/home/ahrgm/Projects/submissions/imgPrcsng/build/CMakeFiles/edit_cache.dir
-/home/ahrgm/Projects/submissions/imgPrcsng/build/CMakeFiles/rebuild_cache.dir

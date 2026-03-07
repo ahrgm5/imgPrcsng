@@ -1,2 +1,0 @@
-/usr/bin/ar qc libAR_bmp.a CMakeFiles/AR_bmp.dir/src/bmp_handling.cpp.o
-/usr/bin/ranlib libAR_bmp.a

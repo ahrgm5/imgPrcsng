@@ -5,7 +5,7 @@
 int main() {
     std::string path = "/home/ahrgm/Projects/imgPrcsng/Content/Course_Materials/HW/HW2/";
     
-    std::string src_images = "/home/ahrgm/Projects/imgPrcsng/imgPrcsng/src/images/";
+    std::string src_images = "/home/ahrgm/Projects/imgPrcsng/src/images/";
     
     
     
