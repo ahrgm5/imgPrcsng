@@ -21,11 +21,12 @@
 % 3. AUTOMATION: Custom command for compact BMPs in columns
 % Usage: \bmpColImage{filename}{pixelWidth}{pixelHeight}{caption}
 \newcommand{\bmpColImage}[4]{
-    \begin{center}
+\begin{figure}[H]
+    \centering
         \includegraphics[width=\linewidth, natwidth=#2, natheight=#3]{#1}
         \captionof{figure}{#4}
-      %  \small(#2 $\times$ #3 pixels)
-    \end{center}
+        \small(#2 $\times$ #3 pixels)
+    \end{figure}
 }
 
 \begin{document}
@@ -434,9 +435,10 @@ cout << "MSE for " << bits << "-bit Quantization: " << mse_quant << endl;
 	%  \small(#2 $\times$ #3 pixels)
 \end{center}
 
+\begin{figure}[H]
 \includegraphics[width=\linewidth]{problem2result.png}
 \captionof{figure}{Error from quantized image}
-%  \small(#2 $\times$ #3 pixels)
+\end{figure}%  \small(#2 $\times$ #3 pixels)
 
 
 \subsubsection{Function Definitions}

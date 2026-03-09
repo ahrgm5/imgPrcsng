@@ -10,7 +10,7 @@ find_library(FFTW_LIB NAMES fftw3 REQUIRED)
 add_library(AR_bmp src/bmp_handling.cpp)
 
 # Specify another folder with a CMakeLists.txt file
-add_subdirectory(Course/HW)
+#add_subdirectory(Course/HW)
 
 # 2. Include Directories for header files 
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -21,7 +21,13 @@ set(SOURCES
 	main.cpp
 	src/bmp_handling.cpp
 	src/cv_bridge.cpp
+	src/filters.cpp
+	src/histogram_utils.cpp
+	src/hsi_handling.cpp
 	src/img_manip.cpp
+	src/spatial_kernels.cpp
+
+
 )
 
 

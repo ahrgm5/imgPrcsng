@@ -1,8 +1,0 @@
-/home/ahrgm/Projects/imgPrcsng/_build/Default/CMakeFiles/AR_bmp.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/CMakeFiles/imgPrcsng.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/CMakeFiles/edit_cache.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/CMakeFiles/rebuild_cache.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/Course/HW/CMakeFiles/hw1_report.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/Course/HW/CMakeFiles/clean_latex.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/Course/HW/CMakeFiles/edit_cache.dir
-/home/ahrgm/Projects/imgPrcsng/_build/Default/Course/HW/CMakeFiles/rebuild_cache.dir
