@@ -2,10 +2,11 @@
 #include <vector>
 #include <string>
 
-#include "bmp_handling.hpp"
-#include "img_manip.hpp"
-#include "histogram_utils.hpp"
+
 #include "filters.hpp"
+#include "img_manip.hpp"
+#include "bmp_handling.hpp"
+#include "histogram_utils.hpp"
 #include "spatial_kernels.hpp"
 
 int main() {
@@ -53,8 +54,6 @@ int main() {
 
 
 
-
-/*
     // ==========================================================
         // TASK 3: High-Frequency Emphasis
         // ==========================================================
@@ -79,7 +78,7 @@ int main() {
             freeBMPImage(filtered_img);
             freeBMPImage(final_xray);
         }
-*/
+
 
     // ==========================================================
     // TASK 4: DFT Analysis and Truncation

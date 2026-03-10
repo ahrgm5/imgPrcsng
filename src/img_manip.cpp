@@ -9,6 +9,53 @@
 #include <algorithm>
 
 
+BMPImage* combine_images(BMPImage* img1, BMPImage* img2, float factor) {
+    if (!img1 || !img2) return nullptr;
+
+    int w = img1->info_header.width_px;
+    int h = abs(img1->info_header.height_px);
+
+    // Validate dimensions match
+    if (w != img2->info_header.width_px || h != abs(img2->info_header.height_px)) {
+        std::cerr << "Error: Dimension mismatch in combine_images." << std::endl;
+        return nullptr;
+    }
+
+    BMPImage* output = createEmptyBMP(w, h, img1->info_header.bits_per_pixel);
+
+    if (img1->info_header.bits_per_pixel == 24) {
+        // Handle 24-bit using HSI to preserve color integrity
+        HSIImage* hsi1 = convert_bmp_to_hsi(img1);
+        HSIImage* hsi2 = convert_bmp_to_hsi(img2);
+
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                float val = hsi1->pixels[i][j].i + (factor * hsi2->pixels[i][j].i);
+                hsi1->pixels[i][j].i = std::clamp(val, 0.0f, 1.0f);
+            }
+        }
+        update_bmp_from_hsi(output, hsi1);
+        freeHSIImage(hsi1);
+        freeHSIImage(hsi2);
+    } else {
+        // Handle 8-bit grayscale
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                float val1 = img1->pixels[i][j] / 255.0f;
+                float val2 = img2->pixels[i][j] / 255.0f;
+                float result = val1 + (factor * val2);
+                output->pixels[i][j] = (uint8_t)std::clamp(result * 255.0f, 0.0f, 255.0f);
+            }
+        }
+    }
+
+    return output;
+}
+
+
+
+
+
 double calculate_mse(BMPImage* orig, BMPImage* processed) {
     if (!orig || !processed) return -1.0;
 
@@ -66,53 +113,32 @@ double calculate_snr(BMPImage* orig, BMPImage* processed) {
 
 
 BMPImage* sharpen_laplacian(BMPImage* input) {
-    // Utilize the spatial_kernels API dynamically
     Kernel* lap_kernel = create_kernel(3, 3, laplacian_init, sizeof(LaplacianKernel));
     BMPImage* edges = apply_kernel_to_bmp(input, lap_kernel);
     destroy_kernel(lap_kernel);
 
-    // Edges are handled correctly through the unified pipeline
-    return edges;
+    // Sharpening is Original + Edges (factor = 1.0)
+    BMPImage* sharpened = combine_images(input, edges, 1.0f);
+
+    freeBMPImage(edges);
+    return sharpened;
 }
 
 BMPImage* unsharp_masking(BMPImage* input, float k) {
-    int h = abs(input->info_header.height_px);
-    int w = input->info_header.width_px;
-    BMPImage* out = createEmptyBMP(w, h, input->info_header.bits_per_pixel);
-
     Kernel* avg_kernel = create_kernel(3, 3, average_init, sizeof(AverageKernel));
     BMPImage* blurred = apply_kernel_to_bmp(input, avg_kernel);
     destroy_kernel(avg_kernel);
 
-    if (input->info_header.bits_per_pixel == 24) {
-        HSIImage* hsi_orig = convert_bmp_to_hsi(input);
-        HSIImage* hsi_blur = convert_bmp_to_hsi(blurred);
+    // 1. Create Detail Mask: Mask = Original - Blur (factor = -1.0)
+    BMPImage* mask = combine_images(input, blurred, -1.0f);
 
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j++) {
-                float mask = hsi_orig->pixels[i][j].i - hsi_blur->pixels[i][j].i;
-                hsi_orig->pixels[i][j].i = std::clamp(hsi_orig->pixels[i][j].i + (k * mask), 0.0f, 1.0f);
-            }
-        }
-        update_bmp_from_hsi(out, hsi_orig);
-        freeHSIImage(hsi_orig);
-        freeHSIImage(hsi_blur);
-    } else {
-        for(int i=0; i<h; i++) {
-            for(int j=0; j<w; j++) {
-                float mask = (input->pixels[i][j] - blurred->pixels[i][j]) / 255.0f;
-                float orig = input->pixels[i][j] / 255.0f;
-                out->pixels[i][j] = (uint8_t)std::clamp((orig + (k * mask)) * 255.0f, 0.0f, 255.0f);
-            }
-        }
-    }
+    // 2. Add weighted mask back: Result = Original + k*Mask (factor = k)
+    BMPImage* sharpened = combine_images(input, mask, k);
 
-    // Clean up the temporary blurred image to prevent leaks
     freeBMPImage(blurred);
-
-    return out;
+    freeBMPImage(mask);
+    return sharpened;
 }
-
 
 
 void run_fft_analysis_centered(BMPImage* input, const std::string& title) {
