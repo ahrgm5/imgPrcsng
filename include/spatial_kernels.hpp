@@ -13,7 +13,7 @@ typedef struct Kernel {
 } Kernel;
 
 typedef struct { Kernel base; } AverageKernel;
-typedef struct { Kernel base; } LaplacianKernel;
+typedef struct { Kernel base; float k;} LaplacianKernel;
 typedef struct { Kernel base; double sigma; } GaussianKernel;
 typedef struct { Kernel base; bool horizontal; } SobelKernel;
 

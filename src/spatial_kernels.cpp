@@ -25,17 +25,36 @@ void destroy_kernel(Kernel* k) {
 }
 
 void average_init(Kernel* self) {
-    float val = 1.0f / (self->width * self->height);
+	AverageKernel* ak = (AverageKernel*)self;
+
+    float val = 1.0f/ (self->width * self->height);
     for (int i = 0; i < self->height; i++)
         for (int j = 0; j < self->width; j++) self->mask[i][j] = val;
 }
 
 void laplacian_init(Kernel* self) {
+	LaplacianKernel* lk = (LaplacianKernel*)self;
+	float k = (lk->k ==0)? 1.0f : lk->k; // Default to 1.0 if k is 0 to avoid zeroing the center
+
+	if(lk->base.width == 3 && lk->base.height == 3) {
+
+		// Standard 3x3 Laplacian kernel with k as the center value
+		float laplacian_3x3[3][3] = {
+			{0, -1, 0},
+			{-1, 4, -1},
+			{0, -1, 0}
+		};
+		for(int i=0; i<3; i++) for(int j=0; j<3; j++) self->mask[i][j] = laplacian_3x3[i][j];
+	}
+		// For very small kernels, we can only set the center to a positive value and the rest to negative
+
+	else{
     int cy = self->height / 2, cx = self->width / 2;
     for (int i = 0; i < self->height; i++)
         for (int j = 0; j < self->width; j++) self->mask[i][j] = -1.0f;
-    self->mask[cy][cx] = (float)(self->width * self->height - 1);
-}
+    self->mask[cy][cx] = (float)((self->width * self->height - 1.0f)*k ); // Center value adjusted by k
+}}
+
 
 void gaussian_init(Kernel* self) {
     GaussianKernel* gk = (GaussianKernel*)self;

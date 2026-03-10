@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <math.h>
 
 
 #include "filters.hpp"
@@ -39,17 +40,19 @@ int main() {
     std::cout << "\n--- Task 2.2: Spatial Sharpening (leaf.bmp) ---" << std::endl;
     BMPImage* leaf = readBMP((src_images +"/leaf/leaf.bmp").c_str());
     if (leaf) {
-        // Sharpening using Laplacian (k=1.0)
-        BMPImage* leaf_lap = sharpen_laplacian(leaf);
-        writeBMP((path+"/Problem2/leaf_sharpened_laplacian.bmp").c_str(), leaf_lap);
+        // Sharpening using 3x3 Laplacian (k=1.5)
+        BMPImages leaf_lap = sharpen_laplacian(leaf, 2.5f, 3, 3);
+        writeBMP((path+"/Problem2/leaf_edges.bmp").c_str(), leaf_lap.images[0]);
+        writeBMP((path+"/Problem2/leaf_sharpened_laplacian.bmp").c_str(), leaf_lap.images[1]);
 
-        // Sharpening using Unsharp Masking (k=1.0)
-        BMPImage* leaf_unsharp = unsharp_masking(leaf, 0.5f);
-        writeBMP((path +"/Problem2/leaf_sharpened_unsharp.bmp").c_str(), leaf_unsharp);
+        // Sharpening using 3x3 Blurring (k=1.5)
+        BMPImages leaf_unsharp = unsharp_masking(leaf, 2.5f, 3, 3);
+        writeBMP((path +"/Problem2/leaf_blurred.bmp").c_str(), leaf_unsharp.images[0]);
+        writeBMP((path +"/Problem2/leaf_sharpened_unsharp_masking.bmp").c_str(), leaf_unsharp.images[1]);
 
         freeBMPImage(leaf);
-        freeBMPImage(leaf_lap);
-        freeBMPImage(leaf_unsharp);
+        freeBMPImages(leaf_lap);
+        freeBMPImages(leaf_unsharp);
     }
 
 
@@ -58,26 +61,106 @@ int main() {
         // TASK 3: High-Frequency Emphasis
         // ==========================================================
         std::cout << "\n--- Task 3: High-Frequency Emphasis (hex.bmp) ---" << std::endl;
-        BMPImage* hex_img = readBMP((src_images + "hex.bmp").c_str());
-        if (hex_img) {
-            int w = hex_img->info_header.width_px;
-            int h = abs(hex_img->info_header.height_px);
 
-            Filter* hp = create_filter(w, h, hpf_logic, sizeof(hpFilter));
-            ((hpFilter*)hp)->cutoff = 30.0;
 
-            // Use the helper function to ensure data is copied and clamped correctly
-            BMPImage* filtered_img = apply_frequency_filter_to_bmp(hex_img, hp);
+        // FIX: Read a new image into memory instead of using the freed 'leaf' pointer
+        BMPImage* test_img = readBMP((src_images + "/leaf/leaf.bmp").c_str());
+        BMPImage* gray_test_img = extract_channel_info(test_img, 3, 1);
 
-            // Perform Histogram Equalization on result
-            BMPImage* final_xray = apply_histogram_equalization(filtered_img);
-            writeBMP((path + "/Problem3/xray_hfe_equalized.bmp").c_str(), final_xray);
+    	writeBMP((path + "/Problem3/test.bmp").c_str(), test_img);
+    	writeBMP((path + "/Problem3/gray_test.bmp").c_str(), gray_test_img);
 
-            destroy_filter(hp);
-            freeBMPImage(hex_img);
-            freeBMPImage(filtered_img);
-            freeBMPImage(final_xray);
+// Order 1
+        if(test_img && gray_test_img) {
+
+
+            printf("%i Bytes per pixel \n", (int)test_img->info_header.bits_per_pixel);
+
+            int w = test_img->info_header.width_px;
+            int h = abs(test_img->info_header.height_px);
+
+            // FIX: Use a sensible cutoff frequency, like 1/4th of the shortest dimension
+            double f_c = std::min(w, h) /150.0;
+
+            // FIX: Assign lpf_logic to the low-pass filter
+            lpFilter* lp = (lpFilter*)create_filter(w, h, lpf_logic, sizeof(lpFilter));
+            hpFilter* hp = (hpFilter*)create_filter(w, h, hpf_logic, sizeof(hpFilter));
+
+            lp->cutoff = f_c;
+            hp->cutoff = f_c;
+
+            // FIX: Pass the correct filter pointer to the correct output variable
+            BMPImage* lp_filtered_img = apply_frequency_filter_to_bmp(test_img, (Filter*)lp);
+            BMPImage* gray_lp_filtered_img = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)lp);
+
+            BMPImage* hp_filtered_img = apply_frequency_filter_to_bmp(test_img, (Filter*)hp);
+            BMPImage* gray_hp_filtered_img = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)hp);
+
+            BMPImage* final_hp_hex = apply_histogram_equalization(hp_filtered_img);
+            BMPImage* final_gray_hp_hex = apply_histogram_equalization(gray_hp_filtered_img);
+
+
+
+            writeBMP((path + "/Problem3/order1/test_lpf.bmp").c_str(), lp_filtered_img);
+            writeBMP((path + "/Problem3/order1/gray_test_lpf.bmp").c_str(), gray_lp_filtered_img);
+
+            writeBMP((path + "/Problem3/order1/test_hpf.bmp").c_str(), hp_filtered_img);
+            writeBMP((path + "/Problem3/order1/gray_test_hpf.bmp").c_str(), gray_hp_filtered_img);
+
+            writeBMP((path + "/Problem3/order1/test_equalized.bmp").c_str(), final_hp_hex);
+            writeBMP((path + "/Problem3/order1/gray_test_equalized.bmp").c_str(), final_gray_hp_hex);
+
+            freeBMPImage(lp_filtered_img);
+            freeBMPImage(hp_filtered_img);
+            freeBMPImage(gray_lp_filtered_img);
+            freeBMPImage(gray_hp_filtered_img);
+            freeBMPImage(final_gray_hp_hex);
+            freeBMPImage(final_hp_hex);
+
+
+
+// order 2
+
+
+                        // FIX: Pass the correct filter pointer to the correct output variable
+
+           BMPImage* eq_color = apply_histogram_equalization(test_img);
+           BMPImage* eq_gray = apply_histogram_equalization(gray_test_img);
+
+
+           BMPImage* eq_color_lpf = apply_frequency_filter_to_bmp(test_img, (Filter*)lp);
+           BMPImage* eq_gray_lpf = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)lp);
+
+           BMPImage* eq_color_hpf = apply_frequency_filter_to_bmp(eq_color, (Filter*)hp);
+           BMPImage* eq_gray_hpf = apply_frequency_filter_to_bmp(eq_gray, (Filter*)hp);
+
+           freeBMPImage(test_img); // Safely free test_img here
+           freeBMPImage(gray_test_img); // Safely free gray_test_img here
+
+           writeBMP((path + "/Problem3/order2/test_equalized.bmp").c_str(), eq_color);
+           writeBMP((path + "/Problem3/order2/gray_test_equalized.bmp").c_str(), eq_gray);
+
+           writeBMP((path + "/Problem3/order2/test_lpf.bmp").c_str(), eq_color_lpf);
+           writeBMP((path + "/Problem3/order2/gray_test_lpf.bmp").c_str(), eq_gray_lpf);
+
+           writeBMP((path + "/Problem3/order2/test_hpf.bmp").c_str(), eq_color_hpf);
+           writeBMP((path + "/Problem3/order2/gray_test_hpf.bmp").c_str(), eq_gray_hpf);
+
+
+           destroy_filter((Filter*)lp);
+           destroy_filter((Filter*)hp);
+
+           freeBMPImage(eq_color);
+           freeBMPImage(eq_gray);
+
+           freeBMPImage(eq_color_hpf);
+           freeBMPImage(eq_gray_hpf);
+
+      }
+        else {
+            printf("Error while reading input file\n");
         }
+
 
 
     // ==========================================================
@@ -94,7 +177,7 @@ int main() {
 
         // 4.2 Truncation (25% and 6.25%)
         double percentages[] = {0.25, 0.0625};
-        std::string names[] = {"recon_25.bmp", "recon_6_25.bmp"};
+        std::string names[] = {(path +"/Problem4/recon_quarter.bmp").c_str(), (path + "/Problem4/recon_sixteneenth.bmp").c_str()};
 
         for (int i = 0; i < 2; i++) {
             TruncationFilter* tf = (TruncationFilter*)create_filter(w, h, rect_truncation_logic, sizeof(TruncationFilter));
@@ -117,3 +200,4 @@ int main() {
     std::cout << "\nAssignment Tasks Completed Successfully." << std::endl;
     return 0;
 }
+

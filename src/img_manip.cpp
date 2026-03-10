@@ -9,6 +9,62 @@
 #include <algorithm>
 
 
+
+void freeBMPImages(BMPImages res) {
+    for (int i = 0; i < res.count; i++) {
+        if (res.images[i]) freeBMPImage(res.images[i]);
+    }
+    if (res.images) free(res.images);
+}
+
+BMPImages sharpen_laplacian(BMPImage* input, float k, int kw, int kh) {
+    BMPImages res;
+    res.count = 2;
+    res.images = (BMPImage**)malloc(sizeof(BMPImage*) * res.count);
+
+    // 1. Create the Laplacian kernel with arbitrary dimensions
+    LaplacianKernel* lap = (LaplacianKernel*)create_kernel(kw, kh, laplacian_init, sizeof(LaplacianKernel));
+    //lap->k = k; // Set the sharpening factor k for the kernel initialization
+    // 2. Output[0]: The Edge Map (Raw convolution result)
+    res.images[0] = apply_kernel_to_bmp(input,(Kernel*) lap);
+
+    // 3. Output[1]: The Sharpened Image
+    // Uses: Original + (k * Edges). k controls the sharpening intensity.
+    res.images[1] = combine_images(input, res.images[0], 1.0f+k); // factor = 1.0f + k to add edges back to original
+
+    destroy_kernel((Kernel*)lap);
+    return res;
+}
+
+BMPImages unsharp_masking(BMPImage* input, float k, int kw, int kh) {
+    BMPImages res;
+    res.count = 2;
+    res.images = (BMPImage**)malloc(sizeof(BMPImage*) * res.count);
+
+    // 1. Create the Box/Averaging kernel
+    AverageKernel* avg = (AverageKernel*)create_kernel(kw, kh, average_init, sizeof(AverageKernel));
+
+    // 2. Output[0]: The Blurred Image
+    res.images[0] = apply_kernel_to_bmp(input, (Kernel*)avg);
+
+    // 3. Output[1]: The Detail Map (High-pass)
+    // Uses factor -1.0 to perform: Original - Blurred
+    BMPImage* mask = combine_images(input, res.images[0], -1.0f);
+
+
+    // 1. Create Detail Mask: Mask = Original - Blur (factor = -1.0)
+     //= combine_images(input, blurred, -1.0f);
+
+    // 2. Add weighted mask back: Result = Original + k*Mask (factor = k)
+    res.images[1] = combine_images(input, mask, k);
+
+
+    destroy_kernel((Kernel*)avg);
+    return res;
+}
+
+
+
 BMPImage* combine_images(BMPImage* img1, BMPImage* img2, float factor) {
     if (!img1 || !img2) return nullptr;
 
@@ -30,7 +86,7 @@ BMPImage* combine_images(BMPImage* img1, BMPImage* img2, float factor) {
 
         for (int i = 0; i < h; i++) {
             for (int j = 0; j < w; j++) {
-                float val = hsi1->pixels[i][j].i + (factor * hsi2->pixels[i][j].i);
+                float val = hsi1->pixels[i][j].i + (factor * hsi2->pixels[i][j].i); // Average to prevent overflow
                 hsi1->pixels[i][j].i = std::clamp(val, 0.0f, 1.0f);
             }
         }
@@ -43,7 +99,7 @@ BMPImage* combine_images(BMPImage* img1, BMPImage* img2, float factor) {
             for (int j = 0; j < w; j++) {
                 float val1 = img1->pixels[i][j] / 255.0f;
                 float val2 = img2->pixels[i][j] / 255.0f;
-                float result = val1 + (factor * val2);
+                float result = val1 + (factor * val2); // Average to prevent overflow
                 output->pixels[i][j] = (uint8_t)std::clamp(result * 255.0f, 0.0f, 255.0f);
             }
         }
@@ -112,14 +168,19 @@ double calculate_snr(BMPImage* orig, BMPImage* processed) {
 
 
 
-BMPImage* sharpen_laplacian(BMPImage* input) {
-    Kernel* lap_kernel = create_kernel(3, 3, laplacian_init, sizeof(LaplacianKernel));
-    BMPImage* edges = apply_kernel_to_bmp(input, lap_kernel);
-    destroy_kernel(lap_kernel);
+
+
+
+BMPImage* sharpen_laplacian(BMPImage* input, float k) {
+    LaplacianKernel* lap_kernel = (LaplacianKernel*)create_kernel(3, 3, laplacian_init, sizeof(LaplacianKernel));
+
+    BMPImage* edges = apply_kernel_to_bmp(input, (Kernel*)lap_kernel);
+    destroy_kernel((Kernel*)lap_kernel);
 
     // Sharpening is Original + Edges (factor = 1.0)
     BMPImage* sharpened = combine_images(input, edges, 1.0f);
 
+   // BMPImage** return_out = { sharpened, edges};
     freeBMPImage(edges);
     return sharpened;
 }
