@@ -1,12 +1,214 @@
 // img_manip.cpp
 #include "img_manip.hpp"
-#include "spatial_kernels.hpp"
-#include "histogram_utils.hpp"
-#include "hsi_handling.hpp"
+#include <bmp.hpp>
 #include <fftw3.h>
+
+#include <kernels.hpp>
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <vector>
+#include <string>
+#include <cstdio>
+
+ImageStats calculate_stats_generic(BMPImage* img) {
+    ImageStats stats = {0}; // Zero-initialize all fields
+    if (!img) return stats;
+
+    int w = img->info_header.width_px;
+    int h = abs(img->info_header.height_px);
+    int n = w * h;
+    stats.num_pixels = n;
+    stats.min = 255.0;
+    stats.max = 0.0;
+
+    std::vector<float> intensities;
+    intensities.reserve(n);
+
+    // 1. Extract Intensity data based on BPP
+    if (img->info_header.bits_per_pixel == 24) {
+        HSIImage* hsi = convert_bmp_to_hsi(img);
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                float val = hsi->pixels[i][j].i * 255.0f;
+                intensities.push_back(val);
+            }
+        }
+        freeHSIImage(hsi);
+    } else {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                intensities.push_back((float)img->pixels[i][j]);
+            }
+        }
+    }
+
+    // 2. Calculate PDF, CDF, Min, Max, and Mean
+    double sum = 0.0;
+    for (float val : intensities) {
+        int idx = (int)std::clamp(val, 0.0f, 255.0f);
+        stats.counts[idx]++;
+        sum += val;
+        if (val < stats.min) stats.min = val;
+        if (val > stats.max) stats.max = val;
+    }
+
+    stats.mean = sum / n;
+
+    // 3. Calculate Std Dev
+    double var_sum = 0.0;
+    for (float val : intensities) {
+        var_sum += std::pow(val - stats.mean, 2);
+    }
+    stats.std_dev = std::sqrt(var_sum / n);
+
+    // 4. Fill PDF/CDF
+    float cumulative = 0;
+    for (int i = 0; i < 256; i++) {
+        stats.pdf[i] = stats.counts[i] / n;
+        cumulative += stats.pdf[i];
+        stats.cdf[i] = cumulative;
+    }
+
+    return stats;
+}
+
+
+BMPImage* apply_histogram_stretching(BMPImage* input) {
+    int w = input->info_header.width_px;
+    int h = abs(input->info_header.height_px);
+    BMPImage* output = createEmptyBMP(w, h, input->info_header.bits_per_pixel);
+
+    // Use HSI for 24-bit images to avoid color distortion and "cut" images
+    if (input->info_header.bits_per_pixel == 24) {
+        HSIImage* hsi = convert_bmp_to_hsi(input);
+        float min_i = 1.0f, max_i = 0.0f;
+
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                if (hsi->pixels[i][j].i < min_i) min_i = hsi->pixels[i][j].i;
+                if (hsi->pixels[i][j].i > max_i) max_i = hsi->pixels[i][j].i;
+            }
+        }
+
+        float range = max_i - min_i;
+        if (range > 0) {
+            for (int i = 0; i < h; i++) {
+                for (int j = 0; j < w; j++) {
+                    hsi->pixels[i][j].i = (hsi->pixels[i][j].i - min_i) / range;
+                }
+            }
+        }
+        update_bmp_from_hsi(output, hsi);
+        freeHSIImage(hsi);
+    } else {
+        // Standard 8-bit grayscale logic
+        uint8_t min_v = 255, max_v = 0;
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                if (input->pixels[i][j] < min_v) min_v = input->pixels[i][j];
+                if (input->pixels[i][j] > max_v) max_v = input->pixels[i][j];
+            }
+        }
+        float range = (float)(max_v - min_v);
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                float val = (range == 0) ? 0 : (float)(input->pixels[i][j] - min_v) / range;
+                output->pixels[i][j] = (uint8_t)(val * 255.0f);
+            }
+        }
+    }
+    return output;
+}
+
+BMPImage* apply_gamma_correction(BMPImage* input, float gamma) {
+    int w = input->info_header.width_px;
+    int h = abs(input->info_header.height_px);
+    BMPImage* output = createEmptyBMP(w, h, input->info_header.bits_per_pixel);
+
+    if (input->info_header.bits_per_pixel == 24) {
+        HSIImage* hsi = convert_bmp_to_hsi(input);
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                hsi->pixels[i][j].i = powf(hsi->pixels[i][j].i, gamma);
+            }
+        }
+        update_bmp_from_hsi(output, hsi);
+        freeHSIImage(hsi);
+    } else {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                float norm = (float)input->pixels[i][j] / 255.0f;
+                output->pixels[i][j] = (uint8_t)(powf(norm, gamma) * 255.0f);
+            }
+        }
+    }
+    return output;
+}
+
+BMPImage* preprocess_for_edges(BMPImage* input, float gamma) {
+    // 1. Perform linear stretch to normalize the intensity range
+    BMPImage* stretched = apply_histogram_stretching(input);
+
+    // 2. Apply gamma correction to the stretched result
+    BMPImage* processed = apply_gamma_correction(stretched, gamma);
+
+    // 3. Clean up the intermediate stretched image to prevent memory leaks
+    freeBMPImage(stretched);
+
+    return processed;
+}
+
+
+BMPImage* apply_histogram_equalization(BMPImage* input, bool plot, const std::string& title) {
+    int w = input->info_header.width_px;
+    int h = abs(input->info_header.height_px);
+    BMPImage* output = createEmptyBMP(w, h, input->info_header.bits_per_pixel);
+
+    // 1. Calculate Statistics for the Transformation
+    ImageStats stats = calculate_stats_generic(input);
+
+    // 2. Conditionally Plot the CDF/Transformation Curve
+    if (plot) {
+        plot_transformation_curve(stats, title); //
+    }
+
+    // 3. Apply Equalization based on Bit Depth
+    if (input->info_header.bits_per_pixel == 24) {
+        // Color Image: Equalize Intensity Channel only
+        HSIImage* hsi = convert_bmp_to_hsi(input); //
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                // Map current intensity (0.0-1.0) using the CDF
+                int level = (int)(hsi->pixels[i][j].i * 255.0f);
+                hsi->pixels[i][j].i = stats.cdf[level];
+            }
+        }
+        update_bmp_from_hsi(output, hsi); //
+        freeHSIImage(hsi);
+    } else {
+        // Grayscale Image: Direct Pixel Mapping
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                uint8_t level = input->pixels[i][j];
+                output->pixels[i][j] = (uint8_t)(stats.cdf[level] * 255.0f);
+            }
+        }
+    }
+
+    return output;
+}
+
+
+
+void plot_transformation_curve(const ImageStats& stats, const std::string& title) {
+    FILE* gp = popen("gnuplot -persistent", "w");
+    if (!gp) return;
+    fprintf(gp, "set title '%s'\nset xlabel 'Original Intensity (u)'\nset ylabel 'New Intensity (v)'\n", title.c_str());
+    fprintf(gp, "plot '-' with lines lw 2 title 'T(u)'\n");
+    for (int i = 0; i < 256; i++) fprintf(gp, "%d %f\n", i, stats.cdf[i] * 255.0f);
+    fprintf(gp, "e\n"); pclose(gp);
+}
 
 
 
@@ -30,7 +232,7 @@ BMPImages sharpen_laplacian(BMPImage* input, float k, int kw, int kh) {
 
     // 3. Output[1]: The Sharpened Image
     // Uses: Original + (k * Edges). k controls the sharpening intensity.
-    res.images[1] = combine_images(input, res.images[0], 1.0f+k); // factor = 1.0f + k to add edges back to original
+    res.images[1] = combine_images(input, res.images[0], 1.0f*k); // factor = 1.0f + k to add edges back to original
 
     destroy_kernel((Kernel*)lap);
     return res;
@@ -109,16 +311,12 @@ BMPImage* combine_images(BMPImage* img1, BMPImage* img2, float factor) {
 }
 
 
-
-
-
 double calculate_mse(BMPImage* orig, BMPImage* processed) {
     if (!orig || !processed) return -1.0;
 
     int w = orig->info_header.width_px;
     int h = abs(orig->info_header.height_px);
 
-    // Safety check for dimensions
     if (w != processed->info_header.width_px || h != abs(processed->info_header.height_px)) {
         std::cerr << "Error: Image dimensions do not match for MSE calculation." << std::endl;
         return -1.0;
@@ -127,19 +325,28 @@ double calculate_mse(BMPImage* orig, BMPImage* processed) {
     double sum_squared_error = 0.0;
     int total_pixels = w * h;
 
-    for (int i = 0; i < h; i++) {
-        for (int j = 0; j < w; j++) {
-            // For 8-bit images, we compare pixel values directly.
-            // For 24-bit images, we compare the Intensity (I) channel.
-            double diff;
-            if (orig->info_header.bits_per_pixel == 8) {
-                diff = (double)orig->pixels[i][j] - (double)processed->pixels[i][j];
-            } else {
-                // If color, you should ideally convert to HSI first or average the RGB
-                // Here we assume 8-bit grayscale for HW2 Task 4 logic.
-                diff = (double)orig->pixels[i][j] - (double)processed->pixels[i][j];
+    if (orig->info_header.bits_per_pixel == 24) {
+        // For 24-bit color, convert to HSI and compare Intensity (I)
+        HSIImage* hsi_orig = convert_bmp_to_hsi(orig);
+        HSIImage* hsi_proc = convert_bmp_to_hsi(processed);
+
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                // Scale 0.0-1.0 intensity back to 0.0-255.0 to match the 8-bit MSE scale
+                double diff = (double)(hsi_orig->pixels[i][j].i * 255.0f) -
+                             (double)(hsi_proc->pixels[i][j].i * 255.0f);
+                sum_squared_error += diff * diff;
             }
-            sum_squared_error += diff * diff;
+        }
+        freeHSIImage(hsi_orig);
+        freeHSIImage(hsi_proc);
+    } else {
+        // For 8-bit grayscale, compare pixel values directly
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                double diff = (double)orig->pixels[i][j] - (double)processed->pixels[i][j];
+                sum_squared_error += diff * diff;
+            }
         }
     }
 
@@ -147,26 +354,37 @@ double calculate_mse(BMPImage* orig, BMPImage* processed) {
 }
 
 
+
+
 double calculate_snr(BMPImage* orig, BMPImage* processed) {
     double mse = calculate_mse(orig, processed);
-    if (mse <= 0) return 99.9; // Avoid division by zero for identical images
+    if (mse <= 0) return 99.9; // Signal is identical to original
 
     int w = orig->info_header.width_px;
     int h = abs(orig->info_header.height_px);
     double signal_power = 0.0;
 
-    for (int i = 0; i < h; i++) {
-        for (int j = 0; j < w; j++) {
-            double val = (double)orig->pixels[i][j];
-            signal_power += val * val;
+    if (orig->info_header.bits_per_pixel == 24) {
+        HSIImage* hsi = convert_bmp_to_hsi(orig);
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                double val = (double)(hsi->pixels[i][j].i * 255.0f);
+                signal_power += val * val;
+            }
+        }
+        freeHSIImage(hsi);
+    } else {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j++) {
+                double val = (double)orig->pixels[i][j];
+                signal_power += val * val;
+            }
         }
     }
 
-    double mean_signal_power = signal_power / (w * h);
+    double mean_signal_power = signal_power / (double)(w * h);
     return 10.0 * log10(mean_signal_power / mse);
 }
-
-
 
 
 
@@ -201,47 +419,154 @@ BMPImage* unsharp_masking(BMPImage* input, float k) {
     return sharpened;
 }
 
-
-void run_fft_analysis_centered(BMPImage* input, const std::string& title) {
-    if (!input) return;
-
-    int w = input->info_header.width_px;
-    int h = abs(input->info_header.height_px);
-    int N = w * h;
-
-    HSIImage* hsi = nullptr;
-    if (input->info_header.bits_per_pixel == 24) {
-        hsi = convert_bmp_to_hsi(input);
-    }
-
-    fftw_complex *in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-    fftw_complex *out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-    fftw_plan p = fftw_plan_dft_2d(h, w, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-
+static void shift_quadrants(double* src, double* dst, int w, int h) {
+    int w2 = w / 2;
+    int h2 = h / 2;
     for (int i = 0; i < h; i++) {
         for (int j = 0; j < w; j++) {
-            double multiplier = ((i + j) % 2 == 0) ? 1.0 : -1.0;
-            if (hsi) in[i * w + j][0] = (double)hsi->pixels[i][j].i * multiplier;
-            else in[i * w + j][0] = (double)(input->pixels[i][j] / 255.0) * multiplier;
+            int ni = (i + h2) % h;
+            int nj = (j + w2) % w;
+            dst[ni * w + nj] = src[i * w + j];
+        }
+    }
+}
+
+
+void run_dft_analysis(BMPImage* img, const std::string& title, bool plot, const std::string& savePath) {
+    if (!img) return;
+    int w = img->info_header.width_px;
+    int h = abs(img->info_header.height_px);
+    int N = w * h;
+
+    // 1. Allocate FFTW buffers
+    fftw_complex* in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    fftw_plan p = fftw_plan_dft_2d(h, w, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    // 2. Load grayscale intensity (normalized 0-1)
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
+            double val = (img->info_header.bits_per_pixel == 24) ?
+                         (0.299*img->pixels[i][j*3+2] + 0.587*img->pixels[i][j*3+1] + 0.114*img->pixels[i][j*3]) / 255.0 :
+                         img->pixels[i][j] / 255.0;
+            in[i * w + j][0] = val;
             in[i * w + j][1] = 0.0;
         }
     }
 
     fftw_execute(p);
 
+    // 3. Calculate Log Magnitude
     double* mag = new double[N];
-    for (int i = 0; i < N; i++) {
-        mag[i] = log(1.0 + sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]));
+    for (int i = 0; i < N; i++) mag[i] = log(1.0 + sqrt(out[i][0] * out[i][0] + out[i][1] * out[i][1]));
+
+
+    // CENTER THE DC COMPONENT
+        double* shifted = new double[N];
+        shift_quadrants(mag, shifted, w, h);
+
+        save_spectrum_plot(shifted, w, h, title, savePath , plot);
+        fftw_destroy_plan(p); fftw_free(in); fftw_free(out);
+        delete[] mag; delete[] shifted;
+}
+
+
+
+
+void run_dct_analysis(BMPImage* img, const std::string& title, bool plot, const std::string& savePath){
+    if (!img) return;
+    int w = img->info_header.width_px;
+    int h = abs(img->info_header.height_px);
+    int N = w * h;
+
+    double* in = (double*) fftw_malloc(sizeof(double) * N);
+    double* out = (double*) fftw_malloc(sizeof(double) * N);
+    fftw_plan p = fftw_plan_r2r_2d(h, w, in, out, FFTW_REDFT10, FFTW_REDFT10, FFTW_ESTIMATE);
+
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
+            double val = (img->info_header.bits_per_pixel == 24) ?
+                         (0.299*img->pixels[i][j*3+2] + 0.587*img->pixels[i][j*3+1] + 0.114*img->pixels[i][j*3]) / 255.0 :
+                         img->pixels[i][j] / 255.0;
+            in[i * w + j] = val;
+        }
     }
 
-    plot_spectrum_gnuplot(mag, w, h, title);
+    fftw_execute(p);
 
-    fftw_destroy_plan(p);
-    fftw_free(in);
-    fftw_free(out);
-    delete[] mag;
-    if(hsi) freeHSIImage(hsi);
+    double* mag = new double[N];
+    for (int i = 0; i < N; i++) mag[i] = log(1.0 + fabs(out[i]));
+
+    // CENTER THE DC COMPONENT
+        double* shifted = new double[N];
+        shift_quadrants(mag, shifted, w, h);
+
+        save_spectrum_plot(shifted, w, h, title, savePath , plot);
+
+        fftw_destroy_plan(p); fftw_free(in); fftw_free(out);
+        delete[] mag; delete[] shifted;
+
 }
+
+
+void save_spectrum_plot(double* data, int w, int h, const std::string& title, const std::string& savePath, bool plot) {
+    if (!data) return;
+
+    // 1. Write data to a unique temporary file
+    std::string temp_filename = "tmp_" + std::to_string(rand()) + ".txt";
+    FILE* temp = fopen(temp_filename.c_str(), "w");
+    if (!temp) return;
+
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
+            fprintf(temp, "%f ", data[i * w + j]);
+        }
+        fprintf(temp, "\n");
+    }
+    fclose(temp);
+
+    // 2. Open Gnuplot pipe
+    FILE* gp = popen("gnuplot", "w");
+    if (gp) {
+        // If savePath is provided, prioritize saving to file
+        if (!savePath.empty()) {
+            fprintf(gp, "set terminal pngcairo size 800,600\n");
+            fprintf(gp, "set output '%s'\n", savePath.c_str());
+        } else if (plot) {
+            fprintf(gp, "set terminal wxt persist\n");
+        }
+
+
+
+        fprintf(gp, "set title '%s'\n", title.c_str());
+        fprintf(gp, "set palette gray\n");
+        fprintf(gp, "set view map\n");
+        fprintf(gp, "set size ratio -1\n");
+
+        // --- REMOVE FILENAME/LEGEND ---
+                fprintf(gp, "unset key\n");
+        // ------------------------------
+
+
+        fprintf(gp, "set xrange [0:%d]\n", w - 1);
+        fprintf(gp, "set yrange [%d:0]\n", h - 1); // Flip y-axis to match image coordinates
+        fprintf(gp, "splot '%s' matrix with image\n", temp_filename.c_str());
+
+        // --- FIXES ADDED HERE ---
+        if (!savePath.empty()) {
+            fprintf(gp, "set output\n"); // Flushes and closes the image file
+        }
+        fprintf(gp, "exit\n");           // Tells gnuplot to exit cleanly
+        // ------------------------
+
+        pclose(gp);
+    }
+
+    // Clean up temp file
+    remove(temp_filename.c_str());
+}
+
+
 
 void plot_spectrum_gnuplot(double* mag_data, int w, int h, const std::string& title) {
     FILE *gp = popen("gnuplot -persist", "w");

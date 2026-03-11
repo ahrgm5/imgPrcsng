@@ -1,9 +1,9 @@
 #ifndef CV_BRIDGE_HPP
 #define CV_BRIDGE_HPP
 
+#include <bmp.hpp>
 #include <opencv2/opencv.hpp>
 #include <string>
-#include "bmp_handling.hpp"
 
 cv::Mat convertBmpToMat(BMPImage* img);
 cv::Mat resize_cv(const cv::Mat& input, int w_out, int h_out, bool use_bilinear);

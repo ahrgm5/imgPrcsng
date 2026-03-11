@@ -1,203 +1,161 @@
+#include <bmp.hpp>
+#include <kernels.hpp>
 #include <iostream>
 #include <vector>
 #include <string>
 #include <math.h>
 
-
 #include "filters.hpp"
 #include "img_manip.hpp"
-#include "bmp_handling.hpp"
-#include "histogram_utils.hpp"
-#include "spatial_kernels.hpp"
 
 int main() {
     std::cout << "Starting HW#2 Image Processing Assignment..." << std::endl;
 
     std::string path = "/home/ahrgm/Projects/imgPrcsng/Course/HW/HW2/";
-
     std::string src_images = "/home/ahrgm/Projects/imgPrcsng/Course/images/";
 
-    // ==========================================================
-    // TASK 2.1: Histogram Equalization
-    // ==========================================================
-    std::cout << "\n--- Task 2.1: Histogram Equalization (pout.bmp) ---" << std::endl;
-    BMPImage* pout = readBMP((src_images +"pout.bmp").c_str());
-    if (pout) {
-        // Implementation of histogram equalization
-        BMPImage* pout_eq = apply_histogram_equalization(pout);
-        writeBMP((path + "/Problem2/pout_equalized.bmp").c_str(), pout_eq);
+    bool plot = false;  // Plot for the apply histogram equalization function
 
-        // plot_transformation_curve() is called inside apply_histogram_equalization
-        // to satisfy Task 2.1.1 (u vs v plot)
+    // ==========================================================
+    // TASK 2.1: Histogram Equalization (pout.bmp)
+    // ==========================================================
+    std::cout << "\n--- Task 2.1: Histogram Equalization ---" << std::endl;
+    // Task requires implementing histogram equalization and applying it to pout [cite: 8]
+    BMPImage* pout = readBMP((src_images + "/2.1/pout.bmp").c_str());
+    if (pout) {
+        BMPImage* pout_eq = apply_histogram_equalization(pout, plot, "Intensity Transformation u vs v");
+        writeBMP((path + "Problem2/2.1/pout_equalized.bmp").c_str(), pout_eq);
+
+        BMPImage* pout_stretched = apply_histogram_stretching(pout);
+        writeBMP((path + "Problem2/2.1/pout_stretched.bmp").c_str(), pout_stretched);
 
         freeBMPImage(pout);
         freeBMPImage(pout_eq);
     }
 
     // ==========================================================
-    // TASK 2.2: Spatial Sharpening (leaf.bmp) [cite: 51]
+    // TASK 2.2: Spatial Sharpening (leaf.bmp)
     // ==========================================================
-    std::cout << "\n--- Task 2.2: Spatial Sharpening (leaf.bmp) ---" << std::endl;
-    BMPImage* leaf = readBMP((src_images +"/leaf/leaf.bmp").c_str());
-    if (leaf) {
-        // Sharpening using 3x3 Laplacian (k=1.5)
-        BMPImages leaf_lap = sharpen_laplacian(leaf, 2.5f, 3, 3);
-        writeBMP((path+"/Problem2/leaf_edges.bmp").c_str(), leaf_lap.images[0]);
-        writeBMP((path+"/Problem2/leaf_sharpened_laplacian.bmp").c_str(), leaf_lap.images[1]);
+    std::cout << "\n--- Task 2.2: Spatial Sharpening ---" << std::endl;
+    // Task requires sharpening leaf.jpg using spatial processing techniques [cite: 14]
+    BMPImage* leaf1 = readBMP((src_images + "leaf/leaf.bmp").c_str());
+    if (leaf1) {
+        BMPImage* prepped = preprocess_for_edges(leaf1, 0.8f);
 
-        // Sharpening using 3x3 Blurring (k=1.5)
-        BMPImages leaf_unsharp = unsharp_masking(leaf, 2.5f, 3, 3);
-        writeBMP((path +"/Problem2/leaf_blurred.bmp").c_str(), leaf_unsharp.images[0]);
-        writeBMP((path +"/Problem2/leaf_sharpened_unsharp_masking.bmp").c_str(), leaf_unsharp.images[1]);
+        // Laplacian Sharpening
+        BMPImages leaf_lap = sharpen_laplacian(prepped, 1.0f, 3, 3);
+        writeBMP((path + "Problem2/2.2/leaf_sharpened_laplacian.bmp").c_str(), leaf_lap.images[1]);
 
-        freeBMPImage(leaf);
+        // Unsharp Masking
+        BMPImages leaf_unsharp = unsharp_masking(prepped, 1.0f, 3, 3);
+        writeBMP((path + "Problem2/2.2/leaf_sharpened_unsharp.bmp").c_str(), leaf_unsharp.images[1]);
+
+        freeBMPImage(leaf1);
+        freeBMPImage(prepped);
         freeBMPImages(leaf_lap);
         freeBMPImages(leaf_unsharp);
     }
 
-
-
     // ==========================================================
-        // TASK 3: High-Frequency Emphasis
-        // ==========================================================
-        std::cout << "\n--- Task 3: High-Frequency Emphasis (hex.bmp) ---" << std::endl;
-
-
-        // FIX: Read a new image into memory instead of using the freed 'leaf' pointer
-        BMPImage* test_img = readBMP((src_images + "/leaf/leaf.bmp").c_str());
-        BMPImage* gray_test_img = extract_channel_info(test_img, 3, 1);
-
-    	writeBMP((path + "/Problem3/test.bmp").c_str(), test_img);
-    	writeBMP((path + "/Problem3/gray_test.bmp").c_str(), gray_test_img);
-
-// Order 1
-        if(test_img && gray_test_img) {
-
-
-            printf("%i Bytes per pixel \n", (int)test_img->info_header.bits_per_pixel);
-
-            int w = test_img->info_header.width_px;
-            int h = abs(test_img->info_header.height_px);
-
-            // FIX: Use a sensible cutoff frequency, like 1/4th of the shortest dimension
-            double f_c = std::min(w, h) /150.0;
-
-            // FIX: Assign lpf_logic to the low-pass filter
-            lpFilter* lp = (lpFilter*)create_filter(w, h, lpf_logic, sizeof(lpFilter));
-            hpFilter* hp = (hpFilter*)create_filter(w, h, hpf_logic, sizeof(hpFilter));
-
-            lp->cutoff = f_c;
-            hp->cutoff = f_c;
-
-            // FIX: Pass the correct filter pointer to the correct output variable
-            BMPImage* lp_filtered_img = apply_frequency_filter_to_bmp(test_img, (Filter*)lp);
-            BMPImage* gray_lp_filtered_img = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)lp);
-
-            BMPImage* hp_filtered_img = apply_frequency_filter_to_bmp(test_img, (Filter*)hp);
-            BMPImage* gray_hp_filtered_img = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)hp);
-
-            BMPImage* final_hp_hex = apply_histogram_equalization(hp_filtered_img);
-            BMPImage* final_gray_hp_hex = apply_histogram_equalization(gray_hp_filtered_img);
-
-
-
-            writeBMP((path + "/Problem3/order1/test_lpf.bmp").c_str(), lp_filtered_img);
-            writeBMP((path + "/Problem3/order1/gray_test_lpf.bmp").c_str(), gray_lp_filtered_img);
-
-            writeBMP((path + "/Problem3/order1/test_hpf.bmp").c_str(), hp_filtered_img);
-            writeBMP((path + "/Problem3/order1/gray_test_hpf.bmp").c_str(), gray_hp_filtered_img);
-
-            writeBMP((path + "/Problem3/order1/test_equalized.bmp").c_str(), final_hp_hex);
-            writeBMP((path + "/Problem3/order1/gray_test_equalized.bmp").c_str(), final_gray_hp_hex);
-
-            freeBMPImage(lp_filtered_img);
-            freeBMPImage(hp_filtered_img);
-            freeBMPImage(gray_lp_filtered_img);
-            freeBMPImage(gray_hp_filtered_img);
-            freeBMPImage(final_gray_hp_hex);
-            freeBMPImage(final_hp_hex);
-
-
-
-// order 2
-
-
-                        // FIX: Pass the correct filter pointer to the correct output variable
-
-           BMPImage* eq_color = apply_histogram_equalization(test_img);
-           BMPImage* eq_gray = apply_histogram_equalization(gray_test_img);
-
-
-           BMPImage* eq_color_lpf = apply_frequency_filter_to_bmp(test_img, (Filter*)lp);
-           BMPImage* eq_gray_lpf = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)lp);
-
-           BMPImage* eq_color_hpf = apply_frequency_filter_to_bmp(eq_color, (Filter*)hp);
-           BMPImage* eq_gray_hpf = apply_frequency_filter_to_bmp(eq_gray, (Filter*)hp);
-
-           freeBMPImage(test_img); // Safely free test_img here
-           freeBMPImage(gray_test_img); // Safely free gray_test_img here
-
-           writeBMP((path + "/Problem3/order2/test_equalized.bmp").c_str(), eq_color);
-           writeBMP((path + "/Problem3/order2/gray_test_equalized.bmp").c_str(), eq_gray);
-
-           writeBMP((path + "/Problem3/order2/test_lpf.bmp").c_str(), eq_color_lpf);
-           writeBMP((path + "/Problem3/order2/gray_test_lpf.bmp").c_str(), eq_gray_lpf);
-
-           writeBMP((path + "/Problem3/order2/test_hpf.bmp").c_str(), eq_color_hpf);
-           writeBMP((path + "/Problem3/order2/gray_test_hpf.bmp").c_str(), eq_gray_hpf);
-
-
-           destroy_filter((Filter*)lp);
-           destroy_filter((Filter*)hp);
-
-           freeBMPImage(eq_color);
-           freeBMPImage(eq_gray);
-
-           freeBMPImage(eq_color_hpf);
-           freeBMPImage(eq_gray_hpf);
-
-      }
-        else {
-            printf("Error while reading input file\n");
-        }
-
-
-
+    // TASK 3: High-Frequency Emphasis Order Analysis
     // ==========================================================
-    // TASK 4: DFT Analysis and Truncation
-    // ==========================================================
-    std::cout << "\n--- Task 4: DFT Analysis and Truncation (baboon.bmp) ---" << std::endl;
-    BMPImage* baboon = readBMP((src_images +"baboon.bmp").c_str());
-    if (baboon) {
-        // 4.1 Plot 2D Log Magnitude
-        run_fft_analysis_centered(baboon, "2D DFT Magnitude - Baboon");
+    std::cout << "\n--- Task 3: High-Frequency Emphasis (Order Analysis) ---" << std::endl;
+    // Task requires combining high-frequency emphasis and histogram equalization [cite: 19, 20]
+    // Must test if the order of applying these two operations matters [cite: 25]
+    BMPImage* test_img = readBMP((src_images + "/leaf/leaf.bmp").c_str());
+    BMPImage* gray_test_img = extract_channel_info(test_img, 3, 1); // Convert to grayscale for frequency processing
 
-        int w = baboon->info_header.width_px;
-        int h = abs(baboon->info_header.height_px);
+    if (test_img) {
+        int w = test_img->info_header.width_px;
+        int h = abs(test_img->info_header.height_px);
+        hpFilter* hp = (hpFilter*)create_filter(FILTER_DOMAIN_DFT, w, h, hpf_logic, sizeof(hpFilter));
+        hp->cutoff = 40.0;
 
-        // 4.2 Truncation (25% and 6.25%)
-        double percentages[] = {0.25, 0.0625};
-        std::string names[] = {(path +"/Problem4/recon_quarter.bmp").c_str(), (path + "/Problem4/recon_sixteneenth.bmp").c_str()};
+        // Order 1: High-Frequency Emphasis Filter -> Histogram Equalization
+        BMPImage* hpf_only = apply_frequency_filter_to_bmp(test_img, (Filter*)hp);
+        BMPImage* order1 = apply_histogram_equalization(hpf_only, plot, "");
+        writeBMP((path + "Problem3/order1_hpf_then_histeq.bmp").c_str(), order1);
 
-        for (int i = 0; i < 2; i++) {
-            TruncationFilter* tf = (TruncationFilter*)create_filter(w, h, rect_truncation_logic, sizeof(TruncationFilter));
-            tf->percent = percentages[i];
+        // Order 2: Histogram Equalization -> High-Frequency Emphasis Filter
+        BMPImage* eq_only = apply_histogram_equalization(test_img, plot, "");
+        BMPImage* order2 = apply_frequency_filter_to_bmp(eq_only, (Filter*)hp);
+        writeBMP((path + "Problem3/order2_histeq_then_hpf.bmp").c_str(), order2);
 
-            // Reconstruct image
-            BMPImage* recon = apply_frequency_filter_to_bmp(baboon, (Filter*)tf);
-
-            // Compute SNR
-            double snr = calculate_snr(baboon, recon);
-            std::cout << "SNR for " << (percentages[i] * 100) << "% truncation: " << snr << " dB" << std::endl;
-
-            writeBMP(names[i].c_str(), recon);
-            destroy_filter((Filter*)tf);
-            freeBMPImage(recon);
-        }
-        freeBMPImage(baboon);
+        destroy_filter((Filter*)hp);
+        freeBMPImage(test_img); freeBMPImage(hpf_only); freeBMPImage(order1);
+        freeBMPImage(eq_only); freeBMPImage(order2);
     }
 
-    std::cout << "\nAssignment Tasks Completed Successfully." << std::endl;
-    return 0;
-}
+    // ==========================================================
+        // TASK 4: DFT/DCT Analysis & Truncation (Organized Tree)
+        // ==========================================================
+        std::cout << "\n--- Task 4: DFT/DCT Analysis & Truncation ---" << std::endl;
 
+        std::vector<std::string> task4_imgs = {"baboon.bmp", "monkeyking.bmp", "sunflower.bmp", "hex.bmp"};
+
+        for (const std::string& img_name : task4_imgs) {
+            std::cout << "Processing: " << img_name << "..." << std::endl;
+
+            BMPImage* color_img = readBMP((src_images + img_name).c_str());
+            if (!color_img) continue;
+
+            // 4.1: Convert to Grayscale
+            // (Assuming extract_channel_info(img, type, channel) extracts intensity)
+            BMPImage* gray_img = extract_channel_info(color_img, 3, 1);
+
+            // --- PREVENTING THE MEMORY ERROR ---
+            // We store the strings in variables so they stay alive until the functions finish.
+            std::string base = img_name.substr(0, img_name.find_last_of("."));
+
+            std::string dft_title = "Centered DFT - " + img_name;
+            std::string dft_spec_path = path + "Problem4/Spectrums/" + base + "_dft_spectrum.png";
+
+            std::string dct_title = "Centered DCT - " + img_name;
+            std::string dct_spec_path = path + "Problem4/Spectrums/" + base + "_dct_spectrum.png";
+
+            // 4.1: Plot and Save 2D log magnitude
+            run_dft_analysis(gray_img, dft_title.c_str(), plot, dft_spec_path.c_str());
+            run_dct_analysis(gray_img, dct_title.c_str(), plot, dct_spec_path.c_str());
+
+            // 4.2: Truncation Analysis (25% and 6.25%)
+            double percentages[] = {0.25, 0.0625};
+            std::string labels[] = {"quarter", "sixteenth"};
+            int w = gray_img->info_header.width_px;
+            int h = abs(gray_img->info_header.height_px);
+
+            for (int i = 0; i < 2; i++) {
+                // Setup Truncation Filters
+                TruncationFilter* tf_DFT = (TruncationFilter*)create_filter(FILTER_DOMAIN_DFT, w, h, rect_truncation_logic, sizeof(TruncationFilter));
+                tf_DFT->percent = percentages[i];
+
+                TruncationFilter* tf_DCT = (TruncationFilter*)create_filter(FILTER_DOMAIN_DCT, w, h, rect_truncation_logic, sizeof(TruncationFilter));
+                tf_DCT->percent = percentages[i];
+
+                // Reconstruct Images
+                BMPImage* recon_dft = apply_frequency_filter_to_bmp(gray_img, (Filter*)tf_DFT);
+                BMPImage* recon_dct = apply_frequency_filter_to_bmp(gray_img, (Filter*)tf_DCT);
+
+                // Compute SNR
+                double snr_dft = calculate_snr(gray_img, recon_dft);
+                double snr_dct = calculate_snr(gray_img, recon_dct);
+                printf("  [%s] Trunc: %.2f%% | DFT SNR: %.2f dB | DCT SNR: %.2f dB\n", img_name.c_str(), percentages[i]*100, snr_dft, snr_dct);
+
+                // Organized Output Names
+                std::string dft_out = path + "Problem4/DFT_recon/" + base + "_recon_" + labels[i] + ".bmp";
+                std::string dct_out = path + "Problem4/DCT_recon/" + base + "_recon_" + labels[i] + ".bmp";
+
+                writeBMP(dft_out.c_str(), recon_dft);
+                writeBMP(dct_out.c_str(), recon_dct);
+
+                // Cleanup Truncation
+                destroy_filter((Filter*)tf_DFT); destroy_filter((Filter*)tf_DCT);
+                freeBMPImage(recon_dft); freeBMPImage(recon_dct);
+            }
+
+            freeBMPImage(color_img);
+            freeBMPImage(gray_img);
+        }
+
+        std::cout << "\nAssignment Completed." << std::endl;
+        return 0;
+    }

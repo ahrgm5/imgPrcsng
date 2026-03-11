@@ -18,13 +18,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Specify Source files
 set(SOURCES 
 	main.cpp
-	src/bmp_handling.cpp
+	src/bmp.cpp
 	#src/cv_bridge.cpp
 	src/filters.cpp
-	src/histogram_utils.cpp
-	src/hsi_handling.cpp
 	src/img_manip.cpp
-	src/spatial_kernels.cpp
+	src/kernels.cpp
 
 
 )
