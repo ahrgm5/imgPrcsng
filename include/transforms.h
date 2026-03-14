@@ -1,7 +1,7 @@
 #ifndef TRANSFORMS_H
 #define TRANSFORMS_H
 
-#include <bmp.h>
+#include "bmp.h"
 #include <fftw3.h>
 #include <stddef.h>
 
@@ -112,6 +112,19 @@ typedef struct Filter {
     fftw_complex *dft_out;
     fftw_plan     dft_forward;
     fftw_plan     dft_backward;
+
+    /*
+     * preloaded_G — pre-computed forward DFT of the input image.
+     *
+     * When non-NULL, filter_execute skips the load + apodise + forward FFT
+     * steps and copies this buffer directly into dft_out instead.  This
+     * allows the same forward transform to be shared across multiple filter
+     * calls on the same image (e.g. the 25-candidate parameter search).
+     *
+     * Set via filter_preload_input_dft().  Not freed by destroy_filter()
+     * since the buffer is owned by the caller and shared across filters.
+     */
+    fftw_complex *preloaded_G;
 
     /* DCT buffers and plans (used when domain == FILTER_DOMAIN_DCT) */
     double       *dct_in;
@@ -228,6 +241,25 @@ void wiener_build_K_spectrum(WienerFilter *wf, BMPImage *noisy,
 /* --- Filter execution ------------------------------------ */
 
 void filter_execute(Filter *f);
+
+/*
+ * filter_preload_input_dft
+ *
+ * Computes the forward DFT of `img` (with apodisation) and stores the
+ * result in `out_G` (caller-allocated, size w*h fftw_complex).
+ * Assign out_G to f->preloaded_G before calling filter_execute to skip
+ * the redundant forward transform on every subsequent call.
+ *
+ * Typical usage in a parameter search loop:
+ *
+ *   fftw_complex *G = fftw_alloc_complex(w * h);
+ *   filter_preload_input_dft(any_filter, img_blur, G);
+ *   // then for each candidate:
+ *   f->preloaded_G = G;
+ *   filter_execute(f);       // forward FFT skipped
+ *   f->preloaded_G = NULL;   // don't let destroy_filter() misuse it
+ */
+void filter_preload_input_dft(Filter *f, BMPImage *img, fftw_complex *out_G);
 
 /* --- Filter application ---------------------------------- */
 

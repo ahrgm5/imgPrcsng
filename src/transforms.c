@@ -687,20 +687,30 @@ void filter_execute(Filter *f) {
     h = f->height;
 
     if (f->domain == FILTER_DOMAIN_DFT) {
-        /* 1. Load spatial data into complex input buffer */
-        for (i = 0; i < h; i++) {
-            for (j = 0; j < w; j++) {
-                f->dft_in[i * w + j][0] = f->img_in[i][j];
-                f->dft_in[i * w + j][1] = 0.0;
+        if (f->preloaded_G) {
+            /*
+             * Fast path: caller pre-computed G = FFT(apodised input) and
+             * stored it in preloaded_G.  Copy directly into dft_out and
+             * skip the load + apodise + forward FFT steps entirely.
+             */
+            memcpy(f->dft_out, f->preloaded_G,
+                   (size_t)(w * h) * sizeof(fftw_complex));
+        } else {
+            /* 1. Load spatial data into complex input buffer */
+            for (i = 0; i < h; i++) {
+                for (j = 0; j < w; j++) {
+                    f->dft_in[i * w + j][0] = f->img_in[i][j];
+                    f->dft_in[i * w + j][1] = 0.0;
+                }
             }
+
+            /* 1b. Apodise border region to suppress periodic-extension ringing */
+            if (f->apod_margin > 0)
+                apodise_complex(f->dft_in, w, h, f->apod_margin);
+
+            /* 2. Forward transform  (spatial -> frequency) */
+            fftw_execute(f->dft_forward);
         }
-
-        /* 1b. Apodise border region to suppress periodic-extension ringing */
-        if (f->apod_margin > 0)
-            apodise_complex(f->dft_in, w, h, f->apod_margin);
-
-        /* 2. Forward transform  (spatial -> frequency) */
-        fftw_execute(f->dft_forward);
 
         /* 3. Apply frequency-domain mask */
         if (f->apply_mask) f->apply_mask(f);
@@ -739,6 +749,52 @@ void filter_execute(Filter *f) {
             for (j = 0; j < w; j++)
                 f->img_out[i][j] = f->dct_in[i * w + j] * norm;
     }
+}
+
+/* ---------------------------------------------------------
+ * filter_preload_input_dft
+ *
+ * Computes the apodised forward DFT of `img` once and stores it in
+ * `out_G` (caller-allocated fftw_complex array of size f->width * f->height).
+ * Assign out_G to f->preloaded_G before filter_execute to skip the
+ * per-call forward transform in the search loop.
+ * --------------------------------------------------------- */
+
+void filter_preload_input_dft(Filter *f, BMPImage *img, fftw_complex *out_G) {
+    int       w, h, i, j;
+    HSIImage *hsi = NULL;
+
+    w = f->width;
+    h = f->height;
+
+    /* Load normalised image data into dft_in */
+    if (img->info_header.bits_per_pixel == 24) {
+        hsi = convert_bmp_to_hsi(img);
+        for (i = 0; i < h; i++) {
+            for (j = 0; j < w; j++) {
+                f->dft_in[i * w + j][0] = hsi->pixels[i][j].i;
+                f->dft_in[i * w + j][1] = 0.0;
+            }
+        }
+        freeHSIImage(hsi);
+    } else {
+        for (i = 0; i < h; i++) {
+            for (j = 0; j < w; j++) {
+                f->dft_in[i * w + j][0] = img->pixels[i][j] / 255.0;
+                f->dft_in[i * w + j][1] = 0.0;
+            }
+        }
+    }
+
+    /* Apodise with the same margin that will be used during filter_execute */
+    if (f->apod_margin > 0)
+        apodise_complex(f->dft_in, w, h, f->apod_margin);
+
+    /* Forward FFT → write directly into caller's out_G buffer */
+    fftw_plan p = fftw_plan_dft_2d(h, w, f->dft_in, out_G,
+                                    FFTW_FORWARD, FFTW_ESTIMATE);
+    fftw_execute(p);
+    fftw_destroy_plan(p);
 }
 
 /* ---------------------------------------------------------

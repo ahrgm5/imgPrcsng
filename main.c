@@ -9,6 +9,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include <fftw3.h>
 
 /* =========================================================
  * HELPER — path concatenation
@@ -115,7 +116,7 @@ int main(void) {
              * behind).  Pass thresh=0 to use the automatic VisuShrink
              * estimator, which uses the same underlying sigma estimate.
              */
-/*            {
+            {
                 BMPImage *wav_denoised;
                 double    mse_wv, snr_wv;
 
@@ -132,7 +133,7 @@ int main(void) {
 
                 freeBMPImage(wav_denoised);
             }
-*/
+
             destroy_wiener_filter(wf);
             destroy_kernel((Kernel *)mbk);
             freeBMPImage(building);
@@ -154,6 +155,9 @@ int main(void) {
         double            mse, min_mse;
         int               best_L;
         double            best_theta;
+        double            sigma_n;
+        double           *shared_K;
+        fftw_complex     *precomp_G;
 
         static const int    blur_lengths[] = {1, 3, 5, 7, 9};
         static const double blur_angles[]  = {0.0, 45.0, 90.0, 135.0, 180.0};
@@ -183,6 +187,47 @@ int main(void) {
         best_theta = 0.0;
         best_img   = NULL;
 
+        /*
+         * Pre-compute the three quantities that are identical for every
+         * candidate in the search grid — they depend only on img_blur,
+         * not on the kernel parameters (L, theta):
+         *
+         *   1. sigma_n     — noise std-dev from the Haar HH1 subband
+         *   2. shared_K    — per-frequency NSR array (Wiener-Hunt formula)
+         *   3. precomp_G   — forward DFT of the apodised blurred image
+         *
+         * Without this, create_wiener_filter_auto recomputes all three
+         * from scratch on every one of the 25 iterations.
+         */
+        {
+            Filter       *f_tmp;
+            WienerFilter *wf_tmp;
+
+            /* Use a dummy L=1 kernel just to set apod_margin consistently */
+            mbk->L = 1; mbk->theta = 0.0;
+            motion_blur_init(base_k);
+            f_tmp  = create_wiener_filter(FILTER_DOMAIN_DFT, w, h,
+                                          base_k, 0.0);
+            /* apod_margin for a 31x31 kernel = 31/2 + 1 = 16 */
+            f_tmp->apod_margin = 16;
+
+            sigma_n = estimate_noise_sigma(img_blur);
+            printf("Pre-computed noise sigma = %.5f\n", sigma_n);
+
+            wiener_build_K_spectrum((WienerFilter *)f_tmp, img_blur, sigma_n);
+
+            /* Steal K_spectrum from tmp filter into shared_K */
+            wf_tmp = (WienerFilter *)f_tmp;
+            shared_K = wf_tmp->K_spectrum;
+            wf_tmp->K_spectrum = NULL;   /* prevent free inside destroy */
+
+            /* Pre-compute G = FFT(apodised img_blur) */
+            precomp_G = fftw_alloc_complex(w * h);
+            filter_preload_input_dft(f_tmp, img_blur, precomp_G);
+
+            destroy_wiener_filter(f_tmp);
+        }
+
         for (li = 0; li < 5; li++) {
             for (ai = 0; ai < 5; ai++) {
                 /* Reset kernel mask */
@@ -195,15 +240,30 @@ int main(void) {
                 motion_blur_init(base_k);
 
                 /*
-                 * Use create_wiener_filter_auto for every candidate so
-                 * K is calibrated to the actual noise in the image rather
-                 * than swept as a separate parameter.  This reduces the
-                 * search from (L × angle × K) to (L × angle) and gives
-                 * a better-calibrated filter at each point.
+                 * Build only the kernel-specific part (OTF of the blur PSF).
+                 * K_spectrum and apod_margin come from the pre-computed values.
                  */
-                f   = create_wiener_filter_auto(FILTER_DOMAIN_DFT, w, h,
-                                                base_k, img_blur);
+                f = create_wiener_filter(FILTER_DOMAIN_DFT, w, h,
+                                         base_k, 0.0);
+                {
+                    WienerFilter *wf = (WienerFilter *)f;
+
+                    /* Attach shared K_spectrum (not owned — don't free it) */
+                    if (wf->K_spectrum) free(wf->K_spectrum);
+                    wf->K_spectrum = shared_K;
+
+                    f->apod_margin  = 16;
+
+                    /* Point to the pre-computed G so filter_execute skips
+                     * the redundant forward FFT of img_blur */
+                    f->preloaded_G = precomp_G;
+                }
+
                 res = apply_frequency_filter_to_bmp(img_blur, f);
+
+                /* Detach shared pointers before destroy to avoid double-free */
+                ((WienerFilter *)f)->K_spectrum = NULL;
+                f->preloaded_G = NULL;
 
                 if (res) {
                     mse = calculate_mse(img_real, res);
@@ -220,6 +280,9 @@ int main(void) {
                 destroy_wiener_filter(f);
             }
         }
+
+        fftw_free(precomp_G);
+        free(shared_K);
 
         printf("1.2 Best Result: L=%d  Theta=%.1f  MSE=%.4f\n",
                best_L, best_theta, min_mse);
