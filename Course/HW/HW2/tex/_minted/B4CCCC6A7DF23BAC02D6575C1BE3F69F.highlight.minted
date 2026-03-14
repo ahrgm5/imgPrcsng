@@ -1,0 +1,14 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{+w}{ }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{pout}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{readBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{src\PYGZus{}images}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{pout.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{ }\PYG{k}{if}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{pout}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{ }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{pout\PYGZus{}eq}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}histogram\PYGZus{}equalization}\PYG{p}{(}\PYG{n}{pout}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{plot}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Intensity Transformation u vs v}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{ }\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem2/2.1/pout\PYGZus{}equalized.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{pout\PYGZus{}eq}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{  }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{pout\PYGZus{}stretched}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}histogram\PYGZus{}stretching}\PYG{p}{(}\PYG{n}{pout}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{ }\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem2/2.1/pout\PYGZus{}stretched.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{pout\PYGZus{}stretched}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{ }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{pout}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{ }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{pout\PYGZus{}eq}\PYG{p}{)}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\end{MintedVerbatim}

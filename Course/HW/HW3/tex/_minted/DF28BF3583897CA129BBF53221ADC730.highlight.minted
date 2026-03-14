@@ -1,0 +1,27 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{test\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{readBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{src\PYGZus{}images}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{leaf.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{gray\PYGZus{}test\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{extract\PYGZus{}channel\PYGZus{}info}\PYG{p}{(}\PYG{n}{test\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{3}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{1}\PYG{p}{)}\PYG{p}{;}\PYG{+w}{ }\PYG{c+c1}{// Convert to grayscale for frequency processing}
+\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}
+\PYG{k}{if}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{test\PYGZus{}img}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{w}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{test\PYGZus{}img}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{info\PYGZus{}header}\PYG{p}{.}\PYG{n}{width\PYGZus{}px}\PYG{p}{;}
+\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{h}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{abs}\PYG{p}{(}\PYG{n}{test\PYGZus{}img}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{info\PYGZus{}header}\PYG{p}{.}\PYG{n}{height\PYGZus{}px}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{GaussianFilter}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{gfltr}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{GaussianFilter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{create\PYGZus{}filter}\PYG{p}{(}\PYG{n}{FILTER\PYGZus{}DOMAIN\PYGZus{}DFT}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{w}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{h}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{hpf\PYGZus{}logic}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{GaussianFilter}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{gfltr}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{sigma}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mf}{0.8}\PYG{p}{;}
+\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}
+\PYG{c+c1}{// Order 1: High\PYGZhy{}Frequency Emphasis Filter \PYGZhy{}\PYGZgt{} Histogram Equalization}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{hpf\PYGZus{}only}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}frequency\PYGZus{}filter\PYGZus{}to\PYGZus{}bmp}\PYG{p}{(}\PYG{n}{gray\PYGZus{}test\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{gfltr}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{order1}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}histogram\PYGZus{}equalization}\PYG{p}{(}\PYG{n}{hpf\PYGZus{}only}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{plot}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem3/order1\PYGZus{}hpf\PYGZus{}then\PYGZus{}histeq.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{order1}\PYG{p}{)}\PYG{p}{;}
+\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}
+\PYG{c+c1}{// Order 2: Histogram Equalization \PYGZhy{}\PYGZgt{} High\PYGZhy{}Frequency Emphasis Filter}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{eq\PYGZus{}only}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}histogram\PYGZus{}equalization}\PYG{p}{(}\PYG{n}{gray\PYGZus{}test\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{plot}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{order2}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}frequency\PYGZus{}filter\PYGZus{}to\PYGZus{}bmp}\PYG{p}{(}\PYG{n}{eq\PYGZus{}only}\PYG{p}{,}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{gfltr}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{writeBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem3/order2\PYGZus{}histeq\PYGZus{}then\PYGZus{}hpf.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{order2}\PYG{p}{)}\PYG{p}{;}
+\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}
+\PYG{n}{destroy\PYGZus{}filter}\PYG{p}{(}\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{gfltr}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{test\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{hpf\PYGZus{}only}\PYG{p}{)}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{order1}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{eq\PYGZus{}only}\PYG{p}{)}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{order2}\PYG{p}{)}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\PYG{o}{\PYGZca{}}\PYG{o}{\PYGZca{}}\PYG{n}{I}
+\end{MintedVerbatim}

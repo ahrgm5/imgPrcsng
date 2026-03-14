@@ -1,0 +1,67 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{vector}\PYG{o}{\PYGZlt{}}\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{o}{\PYGZgt{}}\PYG{+w}{ }\PYG{n}{task4\PYGZus{}imgs}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{p}{\PYGZob{}}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{baboon.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{monkeyking.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{sunflower.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{hex.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{\PYGZcb{}}\PYG{p}{;}
+
+\PYG{+w}{        }\PYG{k}{for}\PYG{+w}{ }\PYG{p}{(}\PYG{k}{const}\PYG{+w}{ }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{o}{\PYGZam{}}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{+w}{ }\PYG{o}{:}\PYG{+w}{ }\PYG{n}{task4\PYGZus{}imgs}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{cout}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Processing: }\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{...}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{endl}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{color\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{readBMP}\PYG{p}{(}\PYG{p}{(}\PYG{n}{src\PYGZus{}images}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{p}{)}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{            }\PYG{k}{if}\PYG{+w}{ }\PYG{p}{(}\PYG{o}{!}\PYG{n}{color\PYGZus{}img}\PYG{p}{)}\PYG{+w}{ }\PYG{k}{continue}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{c+c1}{// 4.1: Convert to Grayscale}
+\PYG{+w}{            }\PYG{c+c1}{// (Assuming extract\PYGZus{}channel\PYGZus{}info(img, type, channel) extracts intensity)}
+\PYG{+w}{            }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{gray\PYGZus{}img}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{extract\PYGZus{}channel\PYGZus{}info}\PYG{p}{(}\PYG{n}{color\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{3}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mi}{1}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{c+c1}{// \PYGZhy{}\PYGZhy{}\PYGZhy{} PREVENTING THE MEMORY ERROR \PYGZhy{}\PYGZhy{}\PYGZhy{}}
+\PYG{+w}{            }\PYG{c+c1}{// We store the strings in variables so they stay alive until the functions finish.}
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{base}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{p}{.}\PYG{n}{substr}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{p}{.}\PYG{n}{find\PYGZus{}last\PYGZus{}of}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{.}\PYG{l+s}{\PYGZdq{}}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{dft\PYGZus{}title}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Centered DFT \PYGZhy{} }\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{p}{;}
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{dft\PYGZus{}spec\PYGZus{}path}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem4/Spectrums/}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{base}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZus{}dft\PYGZus{}spectrum.png}\PYG{l+s}{\PYGZdq{}}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{dct\PYGZus{}title}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Centered DCT \PYGZhy{} }\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{p}{;}
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{dct\PYGZus{}spec\PYGZus{}path}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem4/Spectrums/}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{base}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZus{}dct\PYGZus{}spectrum.png}\PYG{l+s}{\PYGZdq{}}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{c+c1}{// 4.1: Plot and Save 2D log magnitude}
+\PYG{+w}{            }\PYG{n}{run\PYGZus{}dft\PYGZus{}analysis}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{dft\PYGZus{}title}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{plot}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{dft\PYGZus{}spec\PYGZus{}path}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{            }\PYG{n}{run\PYGZus{}dct\PYGZus{}analysis}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{dct\PYGZus{}title}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{plot}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{dct\PYGZus{}spec\PYGZus{}path}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{c+c1}{// 4.2: Truncation Analysis (25\PYGZpc{} and 6.25\PYGZpc{})}
+\PYG{+w}{            }\PYG{k+kt}{double}\PYG{+w}{ }\PYG{n}{percentages}\PYG{p}{[}\PYG{p}{]}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{p}{\PYGZob{}}\PYG{l+m+mf}{0.25}\PYG{p}{,}\PYG{+w}{ }\PYG{l+m+mf}{0.0625}\PYG{p}{\PYGZcb{}}\PYG{p}{;}
+\PYG{+w}{            }\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{labels}\PYG{p}{[}\PYG{p}{]}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{p}{\PYGZob{}}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{quarter}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{sixteenth}\PYG{l+s}{\PYGZdq{}}\PYG{p}{\PYGZcb{}}\PYG{p}{;}
+\PYG{+w}{            }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{w}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{gray\PYGZus{}img}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{info\PYGZus{}header}\PYG{p}{.}\PYG{n}{width\PYGZus{}px}\PYG{p}{;}
+\PYG{+w}{            }\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{h}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{abs}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{info\PYGZus{}header}\PYG{p}{.}\PYG{n}{height\PYGZus{}px}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{            }\PYG{k}{for}\PYG{+w}{ }\PYG{p}{(}\PYG{k+kt}{int}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{i}\PYG{+w}{ }\PYG{o}{\PYGZlt{}}\PYG{+w}{ }\PYG{l+m+mi}{2}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{i}\PYG{o}{+}\PYG{o}{+}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{\PYGZob{}}
+\PYG{+w}{                }\PYG{c+c1}{// Setup Truncation Filters}
+\PYG{n}{TruncationFilter}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{tf\PYGZus{}DFT}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{create\PYGZus{}filter}\PYG{p}{(}\PYG{n}{FILTER\PYGZus{}DOMAIN\PYGZus{}DFT}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{w}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{h}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{rect\PYGZus{}truncation\PYGZus{}logic}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{TruncationFilter}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{                }\PYG{n}{tf\PYGZus{}DFT}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{percent}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{percentages}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]}\PYG{p}{;}
+
+\PYG{n}{TruncationFilter}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{tf\PYGZus{}DCT}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{create\PYGZus{}filter}\PYG{p}{(}\PYG{n}{FILTER\PYGZus{}DOMAIN\PYGZus{}DCT}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{w}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{h}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{rect\PYGZus{}truncation\PYGZus{}logic}\PYG{p}{,}\PYG{+w}{ }\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{TruncationFilter}\PYG{p}{)}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{                }\PYG{n}{tf\PYGZus{}DCT}\PYG{o}{\PYGZhy{}}\PYG{o}{\PYGZgt{}}\PYG{n}{percent}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{percentages}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]}\PYG{p}{;}
+
+\PYG{+w}{                }\PYG{c+c1}{// Reconstruct Images}
+\PYG{+w}{                }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{recon\PYGZus{}dft}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}frequency\PYGZus{}filter\PYGZus{}to\PYGZus{}bmp}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{tf\PYGZus{}DFT}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{                }\PYG{n}{BMPImage}\PYG{o}{*}\PYG{+w}{ }\PYG{n}{recon\PYGZus{}dct}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{apply\PYGZus{}frequency\PYGZus{}filter\PYGZus{}to\PYGZus{}bmp}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{tf\PYGZus{}DCT}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{                }\PYG{c+c1}{// Compute SNR}
+\PYG{+w}{                }\PYG{k+kt}{double}\PYG{+w}{ }\PYG{n}{snr\PYGZus{}dft}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{calculate\PYGZus{}snr}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{recon\PYGZus{}dft}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{                }\PYG{k+kt}{double}\PYG{+w}{ }\PYG{n}{snr\PYGZus{}dct}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{calculate\PYGZus{}snr}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{recon\PYGZus{}dct}\PYG{p}{)}\PYG{p}{;}
+\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{  [\PYGZpc{}s] Trunc: \PYGZpc{}.2f\PYGZpc{}\PYGZpc{} | DFT SNR: \PYGZpc{}.2f dB | DCT SNR: \PYGZpc{}.2f dB}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{img\PYGZus{}name}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{percentages}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]}\PYG{o}{*}\PYG{l+m+mi}{100}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{snr\PYGZus{}dft}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{snr\PYGZus{}dct}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{                }\PYG{c+c1}{// Organized Output Names}
+\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{dft\PYGZus{}out}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem4/DFT\PYGZus{}recon/}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{base}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZus{}recon\PYGZus{}}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{labels}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{;}
+\PYG{n}{std}\PYG{o}{:}\PYG{o}{:}\PYG{n}{string}\PYG{+w}{ }\PYG{n}{dct\PYGZus{}out}\PYG{+w}{ }\PYG{o}{=}\PYG{+w}{ }\PYG{n}{path}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{Problem4/DCT\PYGZus{}recon/}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{base}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{\PYGZus{}recon\PYGZus{}}\PYG{l+s}{\PYGZdq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{labels}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{l+s}{\PYGZdq{}}\PYG{l+s}{.bmp}\PYG{l+s}{\PYGZdq{}}\PYG{p}{;}
+
+\PYG{+w}{                }\PYG{n}{writeBMP}\PYG{p}{(}\PYG{n}{dft\PYGZus{}out}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{recon\PYGZus{}dft}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{                }\PYG{n}{writeBMP}\PYG{p}{(}\PYG{n}{dct\PYGZus{}out}\PYG{p}{.}\PYG{n}{c\PYGZus{}str}\PYG{p}{(}\PYG{p}{)}\PYG{p}{,}\PYG{+w}{ }\PYG{n}{recon\PYGZus{}dct}\PYG{p}{)}\PYG{p}{;}
+
+\PYG{+w}{                }\PYG{c+c1}{// Cleanup Truncation}
+\PYG{+w}{                }\PYG{n}{destroy\PYGZus{}filter}\PYG{p}{(}\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{tf\PYGZus{}DFT}\PYG{p}{)}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{destroy\PYGZus{}filter}\PYG{p}{(}\PYG{p}{(}\PYG{n}{Filter}\PYG{o}{*}\PYG{p}{)}\PYG{n}{tf\PYGZus{}DCT}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{                }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{recon\PYGZus{}dft}\PYG{p}{)}\PYG{p}{;}\PYG{+w}{ }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{recon\PYGZus{}dct}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{            }\PYG{p}{\PYGZcb{}}
+
+\PYG{+w}{            }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{color\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{            }\PYG{n}{freeBMPImage}\PYG{p}{(}\PYG{n}{gray\PYGZus{}img}\PYG{p}{)}\PYG{p}{;}
+\PYG{+w}{        }\PYG{p}{\PYGZcb{}}
+
+\end{MintedVerbatim}

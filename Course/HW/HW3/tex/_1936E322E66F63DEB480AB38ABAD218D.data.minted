@@ -1,0 +1,245 @@
+[
+{
+"command": "styledef",
+"jobname": "imgPrcsngHW3",
+"timestamp": "20260312230745",
+"currentfilepath": "",
+"currentfile": "",
+"inputlineno": "78",
+"cachepath": "_minted/",
+"styledeffilename": "default.style.minted",
+"style": "default",
+"commandprefix": "PYG",
+},
+{
+"command": "highlight",
+"code":
+"""\
+ BMPImage* pout = readBMP((src_images + \"pout.bmp\").c_str());
+ if (pout) {
+ BMPImage* pout_eq = apply_histogram_equalization(pout, plot, \"Intensity Transformation u vs v\");
+ writeBMP((path + \"Problem2/2.1/pout_equalized.bmp\").c_str(), pout_eq);
+
+  BMPImage* pout_stretched = apply_histogram_stretching(pout);
+ writeBMP((path + \"Problem2/2.1/pout_stretched.bmp\").c_str(), pout_stretched);
+
+ freeBMPImage(pout);
+ freeBMPImage(pout_eq);
+}
+
+""",
+"pyopt.lexer": "c",
+"pyopt.commandprefix": "PYG",
+"pyopt.autogobble": "false",
+"pyopt.encoding": "utf8",
+"pyopt.extrakeywords": "",
+"pyopt.extrakeywordsconstant": "",
+"pyopt.extrakeywordsdeclaration": "",
+"pyopt.extrakeywordsnamespace": "",
+"pyopt.extrakeywordspseudo": "",
+"pyopt.extrakeywordsreserved": "",
+"pyopt.extrakeywordstype": "",
+"pyopt.funcnamehighlighting": "true",
+"pyopt.gobble": "0",
+"pyopt.gobblefilter": "0",
+"pyopt.keywordcase": "none",
+"pyopt.literalenvname": "MintedVerbatim",
+"pyopt.mathescape": "false",
+"pyopt.python3": "true",
+"pyopt.rangeregexmatchnumber": "1",
+"pyopt.rangeregexdotall": "false",
+"pyopt.rangeregexmultiline": "false",
+"pyopt.startinline": "false",
+"pyopt.stripall": "false",
+"pyopt.stripnl": "false",
+"pyopt.texcl": "false",
+"pyopt.texcomments": "false",
+"pyopt.codetagify": "",
+"pyopt.escapeinside": "",
+"pyopt.literatecomment": "",
+"pyopt.rangestartstring": "",
+"pyopt.rangestartafterstring": "",
+"pyopt.rangestopstring": "",
+"pyopt.rangestopbeforestring": "",
+"pyopt.rangeregex": "",
+"jobname": "imgPrcsngHW3",
+"timestamp": "20260312230745",
+"currentfilepath": "",
+"currentfile": "",
+"inputlineno": "78",
+"cachepath": "_minted/",
+"highlightfilename": "B4CCCC6A7DF23BAC02D6575C1BE3F69F.highlight.minted",
+},
+{
+"command": "highlight",
+"code":
+"""\
+
+BMPImages leaf1, leaf2 ;
+leaf1.count = 2; // Color & Grayscale
+leaf2.count = 3; // Color, Resized & grayscale
+
+leaf1.images = (BMPImage**)malloc(sizeof(BMPImage*) *leaf1.count);
+leaf2.images = (BMPImage**)malloc(sizeof(BMPImage*) *leaf2.count);
+leaf1.images[0] = readBMP((src_images + \"leaf.bmp\").c_str());
+leaf2.images[0] = readBMP((src_images + \"leaf2.bmp\").c_str());
+
+int w = leaf1.images[0]->info_header.width_px, h = leaf1.images[0]->info_header.height_px;
+
+leaf2.images[1] = resize_bilinear(leaf2.images[0], w, h);
+leaf1.images[1] = extract_channel_info(leaf1.images[0], 3, 1);
+leaf2.images[2] = extract_channel_info(leaf2.images[1], 3, 1);
+
+if (leaf1.images) {
+BMPImage* stretch = preprocess_for_edges(leaf1.images[0], 2.0f);
+BMPImage* eq = apply_histogram_equalization(leaf1.images[0], plot, \"Intensity Transformation\");
+
+// Laplacian Sharpening
+BMPImages leaf_lap = sharpen_laplacian(leaf1.images[0], 1.0f, 3, 3);
+BMPImages leaf_lap1 = sharpen_laplacian(stretch, 1.0f, 3, 3);
+BMPImages leaf_lap2 = sharpen_laplacian(eq, 1.0f, 3, 3);
+// Unsharp Masking
+BMPImages leaf_unsharp = unsharp_masking(leaf1.images[0], 1.0f, 3, 3);
+BMPImages leaf_unsharp1 = unsharp_masking(stretch, 1.0f, 3, 3);
+BMPImages leaf_unsharp2 = unsharp_masking(eq, 1.0f, 3, 3);
+""",
+"pyopt.lexer": "c",
+"pyopt.commandprefix": "PYG",
+"pyopt.autogobble": "false",
+"pyopt.encoding": "utf8",
+"pyopt.extrakeywords": "",
+"pyopt.extrakeywordsconstant": "",
+"pyopt.extrakeywordsdeclaration": "",
+"pyopt.extrakeywordsnamespace": "",
+"pyopt.extrakeywordspseudo": "",
+"pyopt.extrakeywordsreserved": "",
+"pyopt.extrakeywordstype": "",
+"pyopt.funcnamehighlighting": "true",
+"pyopt.gobble": "0",
+"pyopt.gobblefilter": "0",
+"pyopt.keywordcase": "none",
+"pyopt.literalenvname": "MintedVerbatim",
+"pyopt.mathescape": "false",
+"pyopt.python3": "true",
+"pyopt.rangeregexmatchnumber": "1",
+"pyopt.rangeregexdotall": "false",
+"pyopt.rangeregexmultiline": "false",
+"pyopt.startinline": "false",
+"pyopt.stripall": "false",
+"pyopt.stripnl": "false",
+"pyopt.texcl": "false",
+"pyopt.texcomments": "false",
+"pyopt.codetagify": "",
+"pyopt.escapeinside": "",
+"pyopt.literatecomment": "",
+"pyopt.rangestartstring": "",
+"pyopt.rangestartafterstring": "",
+"pyopt.rangestopstring": "",
+"pyopt.rangestopbeforestring": "",
+"pyopt.rangeregex": "",
+"jobname": "imgPrcsngHW3",
+"timestamp": "20260312230745",
+"currentfilepath": "",
+"currentfile": "",
+"inputlineno": "138",
+"cachepath": "_minted/",
+"highlightfilename": "65D8AB90E755A9778309CB2CF9478667.highlight.minted",
+},
+{
+"command": "highlight",
+"code":
+"""\
+
+BMPImage* test_img = readBMP((src_images + \"leaf.bmp\").c_str());
+BMPImage* gray_test_img = extract_channel_info(test_img, 3, 1); // Convert to grayscale for frequency processing
+
+if (test_img) {
+int w = test_img->info_header.width_px;
+int h = abs(test_img->info_header.height_px);
+hpFilter* hp = (hpFilter*)create_filter(FILTER_DOMAIN_DFT, w, h, hpf_logic, sizeof(hpFilter));
+hpf->sigma = std::max(w,h)/100;
+^^I
+// Order 1: High-Frequency Emphasis Filter -> Histogram Equalization
+BMPImage* hpf_only = apply_frequency_filter_to_bmp(gray_test_img, (Filter*)hp);
+BMPImage* order1 = apply_histogram_equalization(hpf_only, plot, \"\");
+writeBMP((path + \"Problem3/order1_hpf_then_histeq.bmp\").c_str(), order1);
+
+// Order 2: Histogram Equalization -> High-Frequency Emphasis Filter
+BMPImage* eq_only = apply_histogram_equalization(gray_test_img, plot, \"\");
+BMPImage* order2 = apply_frequency_filter_to_bmp(eq_only, (Filter*)gfltr);
+writeBMP((path + \"Problem3/order2_histeq_then_hpf.bmp\").c_str(), order2);
+
+destroy_filter((Filter*)hp);
+freeBMPImage(test_img); freeBMPImage(hpf_only); freeBMPImage(order1);
+freeBMPImage(eq_only); freeBMPImage(order2);
+}
+""",
+"pyopt.lexer": "c",
+"pyopt.commandprefix": "PYG",
+"pyopt.autogobble": "false",
+"pyopt.encoding": "utf8",
+"pyopt.extrakeywords": "",
+"pyopt.extrakeywordsconstant": "",
+"pyopt.extrakeywordsdeclaration": "",
+"pyopt.extrakeywordsnamespace": "",
+"pyopt.extrakeywordspseudo": "",
+"pyopt.extrakeywordsreserved": "",
+"pyopt.extrakeywordstype": "",
+"pyopt.funcnamehighlighting": "true",
+"pyopt.gobble": "0",
+"pyopt.gobblefilter": "0",
+"pyopt.keywordcase": "none",
+"pyopt.literalenvname": "MintedVerbatim",
+"pyopt.mathescape": "false",
+"pyopt.python3": "true",
+"pyopt.rangeregexmatchnumber": "1",
+"pyopt.rangeregexdotall": "false",
+"pyopt.rangeregexmultiline": "false",
+"pyopt.startinline": "false",
+"pyopt.stripall": "false",
+"pyopt.stripnl": "false",
+"pyopt.texcl": "false",
+"pyopt.texcomments": "false",
+"pyopt.codetagify": "",
+"pyopt.escapeinside": "",
+"pyopt.literatecomment": "",
+"pyopt.rangestartstring": "",
+"pyopt.rangestartafterstring": "",
+"pyopt.rangestopstring": "",
+"pyopt.rangestopbeforestring": "",
+"pyopt.rangeregex": "",
+"jobname": "imgPrcsngHW3",
+"timestamp": "20260312230745",
+"currentfilepath": "",
+"currentfile": "",
+"inputlineno": "210",
+"cachepath": "_minted/",
+"highlightfilename": "FDA6F85578C37FD13A46846BECE6882D.highlight.minted",
+},
+{
+"command": "highlight",
+"code":
+"""\
+std::vector<std::string> task4_imgs = { \"baboon.bmp\", \"monkeyking.bmp\", \"sunflower.bmp\", \"hex.bmp\"};
+
+        for (const std::string& img_name : task4_imgs) {
+            std::cout << \"Processing: \" << img_name << \"...\" << std::endl;
+
+            BMPImage* color_img = readBMP((src_images + img_name).c_str());
+            if (!color_img) continue;
+
+            // 4.1: Convert to Grayscale
+            // (Assuming extract_channel_info(img, type, channel) extracts intensity)
+            BMPImage* gray_img = extract_channel_info(color_img, 3, 1);
+
+            // --- PREVENTING THE MEMORY ERROR ---
+            // We store the strings in variables so they stay alive until the functions finish.
+            std::string base = img_name.substr(0, img_name.find_last_of(\".\"));
+
+            std::string dft_title = \"Centered DFT - \" + img_name;
+            std::string dft_spec_path = path + \"Problem4/Spectrums/\" + base + \"_dft_spectrum.png\";
+
+            std::string dct_title = \"Centered DCT - \" + img_name;
+            std::string dct_spec_path = path + \"Problem4/Spectrums/\" + base + \"_dct_spectrum.png\";
+
+ 

@@ -1,45 +1,28 @@
 cmake_minimum_required(VERSION 3.31)
+project(imgPrcsng VERSION 1.0 LANGUAGES C)
 
-project(imgPrcsng VERSION 1.0 LANGUAGES CXX)
-
-
-#find_package(OpenCV REQUIRED)
-
+# --- Dependencies ---
 find_library(FFTW_LIB NAMES fftw3 REQUIRED)
 
-
-# Specify another folder with a CMakeLists.txt file
-#add_subdirectory(Course/HW)
-
-# 2. Include Directories for header files 
+# --- Include Directories ---
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-
-# Specify Source files
+# --- Source Files ---
 set(SOURCES 
-	main.cpp
-	src/bmp.cpp
-	#src/cv_bridge.cpp
-	src/filters.cpp
-	src/img_manip.cpp
-	src/kernels.cpp
-
-
+    main.c
+    src/bmp.c
+    src/transforms.c
+    src/imgproc.c
 )
 
-add_library(AR_bmp ${SOURCES})
-
-# Create executable program 
+# --- Executable & Linking ---
 add_executable(imgPrcsng ${SOURCES})
+target_link_libraries(imgPrcsng PRIVATE ${FFTW_LIB} m)
 
-
-# Link libraries
-target_link_libraries(imgPrcsng PRIVATE AR_bmp ${FFTW_LIB})
-#target_link_libraries(imgPrcsng PRIVATE AR_bmp ${OpenCV_LIBS} ${FFTW_LIB})
-
-
-
-# Set Compiler Properties
-
+# --- Compiler Standards ---
 target_include_directories(imgPrcsng PUBLIC include src)
-set_target_properties(imgPrcsng PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+set_target_properties(imgPrcsng PROPERTIES 
+    C_STANDARD 11 
+    C_STANDARD_REQUIRED ON 
+    C_EXTENSIONS OFF
+)
