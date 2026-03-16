@@ -1,0 +1,268 @@
+from ipykernel.kernelbase import Kernel
+import subprocess, tempfile, os, re, shutil
+
+GDB_AVAILABLE = shutil.which("gdb") is not None
+GCC_AVAILABLE = shutil.which("gcc") is not None
+
+# ── Project paths injected by CMake ──────────────────────────────────────────
+INCLUDE_DIR = "@IMGPROC_INCLUDE_DIR@"
+SRC_DIR     = "@IMGPROC_SRC_DIR@"
+LIB_PATH    = "@IMGPROC_LIB_PATH@"
+FFTW_LIB    = "@FFTW_LIB@"
+
+COMPILE_FLAGS = [
+    "-g3", "-O0", "-Wall",
+    f"-I{INCLUDE_DIR}",
+    f"-I{SRC_DIR}",
+    "-std=c11",
+]
+LINK_FLAGS = [LIB_PATH, FFTW_LIB, "-lm"]
+
+# Prepended to every cell — no manual #include needed for these
+AUTO_INCLUDES = [
+    "#include <stdio.h>",
+    "#include <stdlib.h>",
+    "#include <string.h>",
+    "#include <math.h>",
+    '#include "bmp.h"',
+    '#include "imgproc.h"',
+    '#include "transforms.h"',
+]
+
+HELP_TEXT = """
+┌──────────────────────────────────────────────────────────────┐
+│           C (imgPrcsng) Kernel — Debug Commands              │
+├──────────────────────────────────────────────────────────────┤
+│  %break <N>   pause at line N                                │
+│  %break <fn>  pause when function fn() is called             │
+│  %print <x>   print value of x when paused                   │
+│  %watch <x>   pause whenever variable x changes              │
+│  %clear       remove all breakpoints and watches             │
+│  %help        show this message                              │
+├──────────────────────────────────────────────────────────────┤
+│  bmp.h, imgproc.h, transforms.h are included automatically.  │
+│  Bare statements are wrapped in main() automatically.        │
+│  Crashes are caught and shown with GDB backtrace.            │
+└──────────────────────────────────────────────────────────────┘
+"""
+
+
+def _has_main(src):
+    return bool(re.search(r'\bmain\s*\(', src))
+
+def _has_include(src, header):
+    bare = header.strip('<>"')
+    return bool(re.search(r'#\s*include\s*[<"]' + re.escape(bare) + r'[>"]', src))
+
+def _build_source(src):
+    lines      = src.splitlines()
+    pre_lines  = [l for l in lines if l.strip().startswith('#')]
+    code_lines = [l for l in lines if not l.strip().startswith('#')]
+
+    # Build include block: missing auto-includes first, then user's own #directives
+    include_block = [inc for inc in AUTO_INCLUDES if not _has_include(src, inc.split()[1])]
+    include_block.extend(pre_lines)
+
+    if _has_main(src):
+        # Cell already has main() — just prepend missing includes
+        return "\n".join(include_block) + "\n\n" + src
+    else:
+        # Wrap code body in main()
+        indented = "\n".join("    " + l if l.strip() else "" for l in code_lines)
+        return (
+            "\n".join(include_block) + "\n\n"
+            + "int main(void) {\n"
+            + indented
+            + "\n    return 0;\n}\n"
+        )
+
+
+class CGDBKernel(Kernel):
+    implementation         = "c_imgproc"
+    implementation_version = "1.0"
+    language               = "c"
+    language_version       = "C11"
+    language_info          = {"name": "c", "mimetype": "text/x-csrc", "file_extension": ".c"}
+    banner = (
+        "C (imgPrcsng) + GDB Kernel\n"
+        f"  headers : {INCLUDE_DIR}\n"
+        f"  library : {LIB_PATH}\n"
+        "  bmp.h, imgproc.h, transforms.h included automatically\n"
+        "  bare statements wrapped in main() automatically\n"
+        "  type %help for debug commands"
+    )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._breakpoints = []
+        self._watches     = []
+
+    def _send(self, text, stream="stdout"):
+        self.send_response(self.iopub_socket, "stream", {"name": stream, "text": text})
+
+    def _ok(self):
+        return {"status": "ok", "execution_count": self.execution_count,
+                "payload": [], "user_expressions": {}}
+
+    def _compile(self, src_path, binary_path):
+        cmd = ["gcc"] + COMPILE_FLAGS + [src_path, "-o", binary_path] + LINK_FLAGS
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        return r.returncode == 0, r.stderr
+
+    def _format_gdb_output(self, raw):
+        out = []
+        re_frame   = re.compile(r'#(\d+)\s+(?:0x\w+ in )?(.+?) \(.*?\) at (.+):(\d+)')
+        re_local   = re.compile(r'^(\w+) = (.+)$')
+        re_bp_hit  = re.compile(r'Breakpoint \d+,')
+        re_watchpt = re.compile(r'(Old|New) value of `?(.+?)`? =')
+        re_signal  = re.compile(r'Program received signal (\w+)')
+        re_exited  = re.compile(r'exited (normally|with code (\d+))')
+        re_value   = re.compile(r'^\$\d+ = (.+)$')
+        re_source  = re.compile(r'^(\d+)\s+(.+)$')
+        shown_locals = False
+        for line in raw.splitlines():
+            s = line.strip()
+            if not s: continue
+            if any(s.startswith(p) for p in (
+                "Reading symbols", "(gdb)", "[Inferior", "warning:", "GNU gdb", "No stack."
+            )): continue
+            m = re_signal.search(s)
+            if m:
+                explanation = {
+                    "SIGSEGV": "Segfault — bad pointer or out-of-bounds index.",
+                    "SIGABRT": "Abort — assert() failed or abort() called.",
+                    "SIGFPE":  "Arithmetic error — e.g. division by zero.",
+                    "SIGBUS":  "Bus error — misaligned memory access.",
+                }.get(m.group(1), f"Signal {m.group(1)}.")
+                out.append(f"\n💥  CRASH: {explanation}"); shown_locals = False; continue
+            m = re_exited.search(s)
+            if m:
+                out.append("\n✅  Program finished successfully." if "normally" in m.group(1)
+                           else f"\n⚠️   Program exited with code {m.group(2)}."); continue
+            if re_bp_hit.search(s):
+                out.append("\n📍  Breakpoint hit:"); shown_locals = False; continue
+            m = re_watchpt.search(s)
+            if m:
+                label = "Old" if m.group(1) == "Old" else "New"
+                prefix = f"\n👁   Variable '{m.group(2)}' changed:\n     Old:" if label == "Old" else "     New:"
+                out.append(f"{prefix} {s.split('=',1)[1].strip()}"); continue
+            m = re_frame.match(s)
+            if m:
+                label = "  ▶  Here:" if m.group(1) == "0" else f"  #{m.group(1)}"
+                out.append(f"{label}  {m.group(2)}()  —  line {m.group(4)}"); continue
+            m = re_value.match(s)
+            if m: out.append(f"\n🔍  Value: {m.group(1)}"); continue
+            if s == "No locals.": out.append("     (no local variables)"); continue
+            m = re_source.match(s)
+            if m and len(m.group(1)) <= 4:
+                out.append(f"     line {m.group(1)}: {m.group(2)}"); continue
+            m = re_local.match(s)
+            if m and not s.startswith("#"):
+                if not shown_locals: out.append("\n📦  Local variables:"); shown_locals = True
+                out.append(f"     {m.group(1)} = {m.group(2)}"); continue
+            out.append(s)
+        return "\n".join(out) + "\n"
+
+    def _run_plain(self, binary):
+        return subprocess.run([binary], capture_output=True, text=True, timeout=15)
+
+    def _run_gdb_batch(self, binary, print_exprs=None):
+        args = ["gdb", "--batch", "--quiet"]
+        for bp in self._breakpoints: args += ["-ex", f"break {bp}"]
+        for w  in self._watches:     args += ["-ex", f"watch {w}"]
+        args += ["-ex", "run"]
+        if self._breakpoints or self._watches:
+            args += ["-ex", "info locals", "-ex", "bt 5"]
+        for expr in (print_exprs or []): args += ["-ex", f"print {expr}"]
+        args += ["-ex", "bt", binary]
+        r = subprocess.run(args, capture_output=True, text=True, timeout=15)
+        return r.stdout + r.stderr
+
+    def _apply_magic(self, magic_lines):
+        print_exprs = []
+        for line in magic_lines:
+            parts = line.split(None, 1)
+            cmd   = parts[0]
+            arg   = parts[1].strip() if len(parts) > 1 else ""
+            if cmd == "%help":
+                self._send(HELP_TEXT)
+            elif cmd == "%break":
+                if not arg:
+                    self._send("⚠️  %break needs a line number or function name.\n")
+                else:
+                    self._breakpoints.append(arg)
+                    label = f"line {arg}" if arg.isdigit() else f"function '{arg}'"
+                    self._send(f"📍  Breakpoint set at {label}  (total: {len(self._breakpoints)})\n")
+            elif cmd == "%watch":
+                if not arg:
+                    self._send("⚠️  %watch needs a variable name.\n")
+                else:
+                    self._watches.append(arg)
+                    self._send(f"👁   Watching '{arg}'  (total: {len(self._watches)})\n")
+            elif cmd == "%print":
+                if not arg:
+                    self._send("⚠️  %print needs an expression.\n")
+                else:
+                    print_exprs.append(arg)
+            elif cmd == "%clear":
+                self._breakpoints.clear()
+                self._watches.clear()
+                self._send("🗑️   All breakpoints and watches cleared.\n")
+            else:
+                self._send(f"⚠️  Unknown command: {cmd}  (try %help)\n")
+        return print_exprs
+
+    def do_execute(self, code, silent, store_history=True,
+                   user_expressions=None, allow_stdin=False):
+        if not GCC_AVAILABLE:
+            self._send("❌  gcc not found.\n", "stderr")
+            return self._ok()
+
+        lines       = code.strip().splitlines()
+        magic_lines = [l.strip() for l in lines if l.strip().startswith("%")]
+        src_lines   = [l        for l in lines if not l.strip().startswith("%")]
+        src         = "\n".join(src_lines).strip()
+
+        if not src:
+            self._apply_magic(magic_lines)
+            return self._ok()
+
+        print_exprs = self._apply_magic(magic_lines)
+        full_src    = _build_source(src)
+
+        with tempfile.NamedTemporaryFile(suffix=".c", delete=False, dir="/tmp", mode="w") as f:
+            f.write(full_src)
+            src_path = f.name
+        binary_path = src_path.replace(".c", ".out")
+        ok, err = self._compile(src_path, binary_path)
+
+        if not ok:
+            self._send("❌  Compilation failed:\n\n" + err, "stderr")
+            return self._ok()
+
+        use_gdb = self._breakpoints or self._watches or print_exprs
+        if use_gdb:
+            if not GDB_AVAILABLE:
+                self._send("⚠️   GDB not installed — running without debugger.\n")
+                self._send(self._run_plain(binary_path).stdout)
+            else:
+                self._send(self._format_gdb_output(
+                    self._run_gdb_batch(binary_path, print_exprs)))
+        else:
+            result = self._run_plain(binary_path)
+            if result.stdout: self._send(result.stdout)
+            if result.stderr: self._send(result.stderr, "stderr")
+            if result.returncode < 0:
+                if GDB_AVAILABLE:
+                    self._send("\n💥  Program crashed — running GDB…\n")
+                    self._send(self._format_gdb_output(self._run_gdb_batch(binary_path)))
+                else:
+                    self._send(
+                        f"\n💥  Crash (signal {-result.returncode}). "
+                        "Install GDB for a backtrace.\n", "stderr")
+        return self._ok()
+
+
+if __name__ == "__main__":
+    from ipykernel.kernelapp import IPKernelApp
+    IPKernelApp.launch_instance(kernel_class=CGDBKernel)

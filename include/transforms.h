@@ -1,7 +1,7 @@
 #ifndef TRANSFORMS_H
 #define TRANSFORMS_H
 
-#include "bmp.h"
+#include <bmp.h>
 #include <fftw3.h>
 #include <stddef.h>
 

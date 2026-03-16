@@ -116,7 +116,7 @@ int main(void) {
              * behind).  Pass thresh=0 to use the automatic VisuShrink
              * estimator, which uses the same underlying sigma estimate.
              */
-            {
+ /*           {
                 BMPImage *wav_denoised;
                 double    mse_wv, snr_wv;
 
@@ -133,7 +133,7 @@ int main(void) {
 
                 freeBMPImage(wav_denoised);
             }
-
+*/
             destroy_wiener_filter(wf);
             destroy_kernel((Kernel *)mbk);
             freeBMPImage(building);

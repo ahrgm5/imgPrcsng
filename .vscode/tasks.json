@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cmake: build imgPrcsng",
+      "type": "shell",
+      "command": "cmake --build /home/ahrgm/Projects/imgPrcsngC/build --target imgPrcsng",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "cmake: build imgproc_lib",
+      "type": "shell",
+      "command": "cmake --build /home/ahrgm/Projects/imgPrcsngC/build --target imgproc_lib",
+      "group": "build",
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "cmake: build current test",
+      "type": "shell",
+      "command": "gcc -g3 -O0 -std=c11 -I/home/ahrgm/Projects/imgPrcsngC/include -I/home/ahrgm/Projects/imgPrcsngC/src ${file} /home/ahrgm/Projects/imgPrcsngC/build/libimgproc_lib.a -lfftw3 -lm -o /home/ahrgm/Projects/imgPrcsngC/build/_vscode_test",
+      "group": "build",
+      "presentation": { "reveal": "silent", "panel": "shared" },
+      "problemMatcher": "$gcc"
+    }
+  ]
+}

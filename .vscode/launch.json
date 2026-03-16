@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug imgPrcsng",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/home/ahrgm/Projects/imgPrcsngC/build/imgPrcsng",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "/home/ahrgm/Projects/imgPrcsngC",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "cmake: build imgPrcsng",
+      "setupCommands": [
+        { "description": "Pretty-print STL",     "text": "-enable-pretty-printing",                     "ignoreFailures": true },
+        { "description": "Skip glibc internals", "text": "-interpreter-exec console \"skip -rfu ^__\"", "ignoreFailures": true }
+      ],
+      "sourceFileMap": { "/home/ahrgm/Projects/imgPrcsngC": "/home/ahrgm/Projects/imgPrcsngC" }
+    },
+    {
+      "name": "Debug imgPrcsng (attach)",
+      "type": "cppdbg",
+      "request": "attach",
+      "program": "/home/ahrgm/Projects/imgPrcsngC/build/imgPrcsng",
+      "processId": "${command:pickProcess}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "setupCommands": [
+        { "description": "Pretty-print STL", "text": "-enable-pretty-printing", "ignoreFailures": true }
+      ]
+    },
+    {
+      "name": "Debug current test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/home/ahrgm/Projects/imgPrcsngC/build/_vscode_test",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "/home/ahrgm/Projects/imgPrcsngC",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "cmake: build current test",
+      "setupCommands": [
+        { "description": "Pretty-print STL", "text": "-enable-pretty-printing", "ignoreFailures": true }
+      ],
+      "sourceFileMap": { "/home/ahrgm/Projects/imgPrcsngC": "/home/ahrgm/Projects/imgPrcsngC" }
+    }
+  ]
+}
