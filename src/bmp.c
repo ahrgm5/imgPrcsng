@@ -53,7 +53,14 @@ static int allocatePixelMemory(BMPImage *img) {
     return 0;
 }
 
-
+static void show_bmp(BMPImage *img, const char *label) {
+    
+    char path[64];
+    snprintf(path, sizeof(path), "/tmp/jup_bmp_%p.bmp", (void*)img);
+    writeBMP(path, img);
+    printf("__DISPLAY_BMP__:%s\n", path);
+    fflush(stdout);
+}
 
 /* =========================================================
  * BMP I/O

@@ -2,7 +2,7 @@
   "display_name": "C (imgPrcsng)",
   "argv": [
     "@PIPX_PYTHON@",
-    "/home/ahrgm/.local/share/jupyter/kernels/c_imgproc/kernel.py",
+    "@KERNEL_DIR@/kernel.py",
     "-f", "{connection_file}"
   ],
   "language": "c"

@@ -358,8 +358,10 @@ BMPImages unsharp_masking(BMPImage *input, float k, int kw, int kh) {
 }
 
 BMPImages segment_color_hsi(BMPImage *input,
-                             const float *target_hues, int n_hues,
-                             float hue_tol, float min_sat) {
+                            const float *target_hues, 
+                            int n_hues,
+                            float hue_tol, 
+                            float min_sat) {
     BMPImages output;
     int       w, h, k, i, j;
     float     delta;
@@ -397,7 +399,7 @@ BMPImages segment_color_hsi(BMPImage *input,
                     /* Black out non-matching pixels */
                     hsi->pixels[i][j].i = 0.0f;
                     if (delta > hue_tol) {
-                        any_miss = 1;
+
                         if (delta > max_d) max_d = delta;
                     }
                 }

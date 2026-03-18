@@ -99,7 +99,7 @@ typedef struct {
 BMPImage *readBMP(const char *filename);
 void      writeBMP(const char *filename, BMPImage *img);
 
-
+static void show_bmp(BMPImage *img, const char *label);
 /* =========================================================
  * BMP CONSTRUCTION / DESTRUCTION
  * ========================================================= */
