@@ -1,1 +1,1 @@
-C kernel fro image processing that works in Jupyterlab and VSCode
+C kernel for Image Processing with GNUPlot that works in Jupyterlab and VSCode
