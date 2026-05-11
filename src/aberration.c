@@ -1,7 +1,17 @@
 /* aberration.c
  *
  * Implementation of the aberration ISP pipeline.
- * Stages: denoise → Wiener → WVD phase → unwrap → Zernike → Seidel
+ *
+ * Corrected stage order:
+ *   1a. Wiener deconvolution  — on the raw interferogram, so the noise
+ *       estimate reflects true acquisition noise, not a pre-smoothed image.
+ *   1b. Wavelet denoise       — cleans up noise amplified by the Wiener
+ *       filter near OTF nulls.  Threshold is auto-estimated from the
+ *       deconvolved image, which is appropriate because noise statistics
+ *       change after deconvolution.
+ *   2.  WVD phase extraction
+ *   3.  Phase unwrapping
+ *   4.  Zernike fit → Seidel coefficients
  *
  * Build dependency: links against fftw3 (already a project dependency).
  * No new external libraries required.
@@ -87,7 +97,7 @@ void free_wvd(WVDResult *wvd) {
  *     Compute the local auto-correlation kernel:
  *       R(n, tau) = x(n+tau) * conj(x(n-tau)),  |tau| <= half_win
  *     Zero-pad to n_samples, then FFT over tau.
- *     The magnitude-squared of the FFT gives the WVD slice.
+ *     The real part of the FFT gives the WVD slice.
  *
  * The analytic signal is computed via the Hilbert transform
  * (one-sided FFT zero-padding) before computing the WVD proper.
@@ -322,7 +332,7 @@ PhaseMap *extract_phase_wvd(BMPImage *interferogram, int half_win) {
  */
 void compute_phase_quality(PhaseMap *pm) {
     int    w, h, i, j, ni, nj, ci, cj;
-    double sum, dx, dy, val;
+    double sum, dx, val;
     const int radius = 2;
 
     if (!pm) return;
@@ -531,32 +541,16 @@ void unwrap_phase_quality(PhaseMap *pm) {
 
 /*
  * OSA/ANSI single-index Zernike polynomial Z_j(rho, theta).
- *
- * The double-index (n, m) is derived from single index j via:
- *   n = ceil((-3 + sqrt(9 + 8j)) / 2)   (radial order)
- *   m = 2j - n(n+2)                       (azimuthal frequency)
- *
- * Radial polynomial R_n^m via Rodrigues / recurrence.
  */
 
 static double zernike_radial(int n, int m, double rho) {
-    /*
-     * R_n^|m|(rho)
-     *
-     * Uses the Zernike radial polynomial recurrence:
-     *   R_n^m = sum_{s=0}^{(n-|m|)/2}
-     *             (-1)^s (n-s)! / (s! ((n+|m|)/2-s)! ((n-|m|)/2-s)!)
-     *             * rho^(n-2s)
-     */
     int    s, nm = abs(m), k = (n - nm) / 2;
-    double sum = 0.0, rho_pow, num, den;
+    double sum = 0.0, rho_pow;
 
     if ((n - nm) % 2 != 0) return 0.0;
 
     for (s = 0; s <= k; s++) {
-        /* Compute (-1)^s * (n-s)! / (s! * ((n+nm)/2-s)! * ((n-nm)/2-s)!) */
         rho_pow = pow(rho, (double)(n - 2 * s));
-        /* Use log-factorials for numerical safety */
         double lgnum = lgamma(n - s + 1);
         double lgden = lgamma(s + 1)
                      + lgamma((n + nm) / 2 - s + 1)
@@ -567,7 +561,6 @@ static double zernike_radial(int n, int m, double rho) {
     return sum;
 }
 
-/* Convert OSA single index j to (n, m) */
 static void osa_index_to_nm(int j, int *n_out, int *m_out) {
     int n = (int)ceil((-3.0 + sqrt(9.0 + 8.0 * j)) / 2.0);
     int m = 2 * j - n * (n + 2);
@@ -575,7 +568,6 @@ static void osa_index_to_nm(int j, int *n_out, int *m_out) {
     *m_out = m;
 }
 
-/* Evaluate Z_j at (rho, theta) */
 static double eval_zernike(int j, double rho, double theta) {
     int    n, m;
     double R, Z;
@@ -623,7 +615,7 @@ ZernikeBasis *create_zernike_basis(int w, int h, int n_terms) {
 
     cx    = (w - 1) / 2.0;
     cy    = (h - 1) / 2.0;
-    max_r = (cx < cy) ? cx : cy;   /* inscribed circle radius */
+    max_r = (cx < cy) ? cx : cy;
 
     n_pupil = 0;
     for (i = 0; i < h; i++) {
@@ -658,20 +650,10 @@ void free_zernike_basis(ZernikeBasis *zb) {
     free(zb);
 }
 
-/*
- * fit_zernike — least-squares via normal equations.
- *
- * Z^T Z c = Z^T phi
- * Solved with Cholesky decomposition (compact in-place, no LAPACK needed).
- * n_terms <= 28, so the matrix is at most 28×28 — trivial cost.
- */
-
 static void cholesky_solve(double *A, double *b, int n) {
-    /* In-place Cholesky factorisation of A (lower triangle), then solve */
     int i, j, k;
     double sum;
 
-    /* Factor A = L L^T */
     for (i = 0; i < n; i++) {
         for (j = 0; j <= i; j++) {
             sum = A[i * n + j];
@@ -684,14 +666,12 @@ static void cholesky_solve(double *A, double *b, int n) {
         }
     }
 
-    /* Forward substitution: L y = b */
     for (i = 0; i < n; i++) {
         sum = b[i];
         for (k = 0; k < i; k++) sum -= A[i * n + k] * b[k];
         b[i] = sum / A[i * n + i];
     }
 
-    /* Back substitution: L^T x = y */
     for (i = n - 1; i >= 0; i--) {
         sum = b[i];
         for (k = i + 1; k < n; k++) sum -= A[k * n + i] * b[k];
@@ -710,7 +690,6 @@ void fit_zernike(const PhaseMap *phase, const ZernikeBasis *zb,
     Ztphi = (double *)calloc(n,     sizeof(double));
     if (!ZtZ || !Ztphi) { free(ZtZ); free(Ztphi); return; }
 
-    /* Accumulate Z^T Z and Z^T phi over pupil pixels only */
     for (i = 0; i < N; i++) {
         if (!zb->pupil_mask[i]) continue;
         int row = i / zb->width;
@@ -725,15 +704,12 @@ void fit_zernike(const PhaseMap *phase, const ZernikeBasis *zb,
         }
     }
 
-    /* Mirror upper triangle */
     for (j = 0; j < n; j++)
         for (k = j + 1; k < n; k++)
             ZtZ[k * n + j] = ZtZ[j * n + k];
 
-    /* Regularise slightly for numerical stability */
     for (j = 0; j < n; j++) ZtZ[j * n + j] += 1e-10;
 
-    /* Solve */
     memcpy(coeffs_out, Ztphi, n * sizeof(double));
     cholesky_solve(ZtZ, coeffs_out, n);
 
@@ -745,23 +721,6 @@ void fit_zernike(const PhaseMap *phase, const ZernikeBasis *zb,
  * SECTION 5 — ZERNIKE → SEIDEL CONVERSION
  * ========================================================= */
 
-/*
- * Standard linear relations (OSA/ANSI single-index, normalised):
- *
- *   j=4   Z4  = sqrt(3)(2ρ²-1)         ← defocus
- *   j=5   Z5  = sqrt(6)ρ²sin(2θ)       ← astigmatism (sin)
- *   j=6   Z6  = sqrt(6)ρ²cos(2θ)       ← astigmatism (cos)
- *   j=7   Z7  = sqrt(8)(3ρ³-2ρ)sin(θ)  ← coma (sin)
- *   j=8   Z8  = sqrt(8)(3ρ³-2ρ)cos(θ)  ← coma (cos)
- *   j=11  Z11 = sqrt(5)(6ρ⁴-6ρ²+1)     ← primary spherical
- *
- * Seidel–Zernike conversion (wave-aberration units):
- *   W040  = c11 / (6*sqrt(5))     [spherical]
- *   W131  = sqrt(c7²+c8²) / (2*sqrt(8)/3)   [coma magnitude]
- *   W222  = sqrt(c5²+c6²) / (2*sqrt(6))     [astigmatism magnitude]
- *   W220  = c4 / (2*sqrt(3)) - W222/2        [field curvature]
- *   W311  = 0  (requires off-axis field data; set to 0 for on-axis)
- */
 void zernike_to_seidel(const double *zc, SeidelCoeffs *sc) {
     double c4, c5, c6, c7, c8, c11;
     double sum_sq, sigma;
@@ -769,7 +728,6 @@ void zernike_to_seidel(const double *zc, SeidelCoeffs *sc) {
 
     if (!zc || !sc) return;
 
-    /* Guard against arrays shorter than needed */
     c4  = (ZERNIKE_TERMS >  4) ? zc[4]  : 0.0;
     c5  = (ZERNIKE_TERMS >  5) ? zc[5]  : 0.0;
     c6  = (ZERNIKE_TERMS >  6) ? zc[6]  : 0.0;
@@ -781,14 +739,12 @@ void zernike_to_seidel(const double *zc, SeidelCoeffs *sc) {
     sc->W[1] = sqrt(c7*c7 + c8*c8) / (2.0 * sqrt(8.0) / 3.0);
     sc->W[2] = sqrt(c5*c5 + c6*c6) / (2.0 * sqrt(6.0));
     sc->W[3] = c4 / (2.0 * sqrt(3.0)) - sc->W[2] / 2.0;
-    sc->W[4] = 0.0;   /* distortion requires off-axis data */
+    sc->W[4] = 0.0;
 
-    /* RMS wavefront error: exclude piston (j=0) */
     sum_sq = 0.0;
     for (k = 1; k < ZERNIKE_TERMS; k++) sum_sq += zc[k] * zc[k];
     sc->rms_wavefront = sqrt(sum_sq);
 
-    /* Maréchal approximation (valid for σ < λ/14) */
     sigma      = 2.0 * M_PI * sc->rms_wavefront;
     sc->strehl = exp(-(sigma * sigma));
 }
@@ -849,11 +805,34 @@ BMPImage *phase_map_to_bmp(const PhaseMap *pm) {
     return out;
 }
 
+/*
+ * run_aberration_pipeline
+ *
+ * Corrected stage order:
+ *
+ *   Stage 1a — Wiener deconvolution (on raw interferogram)
+ *              Noise is estimated from the original blurred image so
+ *              that the adaptive K-spectrum reflects true acquisition
+ *              noise, not an already-smoothed version of it.
+ *
+ *   Stage 1b — Wavelet denoise (on deconvolved image)
+ *              The Wiener filter amplifies noise near OTF nulls even
+ *              with adaptive regularisation.  Wavelet soft-thresholding
+ *              cleans up this residual noise.  The threshold is
+ *              auto-estimated from the deconvolved image (thresh=0),
+ *              which is correct because noise statistics change after
+ *              deconvolution.
+ *
+ *   Stage 2  — WVD phase extraction
+ *   Stage 3  — Phase quality + quality-guided unwrapping
+ *   Stage 4  — Zernike fit (order 6, 28 terms)
+ *   Stage 5  — Zernike → Seidel conversion
+ */
 AberrationPipelineResult *run_aberration_pipeline(BMPImage *interferogram,
                                                    Kernel   *blur_kernel,
                                                    int       use_quality_unwrap) {
     AberrationPipelineResult *result;
-    BMPImage    *denoised, *wiener_out;
+    BMPImage    *denoised;
     PhaseMap    *wrapped, *unwrapped;
     ZernikeBasis *zb;
     double      *zc;
@@ -867,40 +846,58 @@ AberrationPipelineResult *run_aberration_pipeline(BMPImage *interferogram,
     w = interferogram->info_header.width_px;
     h = abs(interferogram->info_header.height_px);
 
-    /* ---- Stage 1a: wavelet denoise ----------------------------- */
-    denoised = apply_wavelet_denoise(interferogram, 3, 0.0,
-                                     WAVELET_THRESH_SOFT);
-    if (!denoised) denoised = interferogram;  /* fallback: use original */
-    result->denoised = denoised;
+    /* ----------------------------------------------------------------
+     * Stage 1a: Wiener deconvolution — performed first, on the raw
+     * interferogram.  If no blur kernel is supplied the stage is
+     * skipped and the raw image is passed directly to the wavelet step.
+     * ---------------------------------------------------------------- */
+    {
+        BMPImage *current = interferogram; /* default: bypass Wiener */
 
-    /* ---- Stage 1b: Wiener deconvolution (optional) ------------- */
-    if (blur_kernel) {
-        Filter   *wf;
-        BMPImage *w_out;
+        if (blur_kernel) {
+            Filter   *wf;
+            BMPImage *w_out;
 
-        wf    = create_wiener_filter_auto(FILTER_DOMAIN_DFT,
-                                          w, h, blur_kernel, denoised);
-        w_out = apply_frequency_filter_to_bmp(denoised, wf);
-        destroy_wiener_filter(wf);
+            /*
+             * Noise estimate comes from the original blurred image.
+             * This gives an honest noise level for building K(u,v).
+             */
+            wf    = create_wiener_filter_auto(FILTER_DOMAIN_DFT,
+                                              w, h, blur_kernel,
+                                              interferogram);
+            w_out = apply_frequency_filter_to_bmp(interferogram, wf);
+            destroy_wiener_filter(wf);
 
-        if (w_out) {
-            /* Replace denoised with Wiener output */
-            if (result->denoised != interferogram)
-                freeBMPImage(result->denoised);
-            result->denoised = w_out;
-            denoised = w_out;
+            if (w_out)
+                current = w_out; /* deconvolved image, owned locally */
         }
+
+        /* --------------------------------------------------------------
+         * Stage 1b: Wavelet denoise — on the deconvolved (or original)
+         * image.  thresh = 0 triggers the automatic VisuShrink estimator
+         * which reads the HH1 subband of `current`, giving the right
+         * noise level for whatever the Wiener stage left behind.
+         * -------------------------------------------------------------- */
+        denoised = apply_wavelet_denoise(current, 3, 0.0,
+                                         WAVELET_THRESH_SOFT);
+        if (!denoised)
+            denoised = current; /* fallback: keep deconvolved image as-is */
+
+        /*
+         * Free the intermediate Wiener output now that the wavelet step
+         * has produced its own allocation (or fell back to current).
+         */
+        if (current != interferogram && current != denoised)
+            freeBMPImage(current);
+
+        result->denoised = denoised;
     }
 
     /* ---- Stage 2: WVD phase extraction ------------------------- */
-    wrapped          = extract_phase_wvd(denoised, 0);
+    wrapped               = extract_phase_wvd(denoised, 0);
     result->wrapped_phase = wrapped;
 
     /* ---- Stage 3: phase unwrapping ----------------------------- */
-    /*
-     * We need a *copy* of the wrapped phase for the unwrapper because
-     * it operates in-place; the wrapped_phase field keeps the original.
-     */
     unwrapped = create_phase_map(w, h);
     if (unwrapped && wrapped) {
         int i;
