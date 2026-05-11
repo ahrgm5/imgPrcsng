@@ -4,19 +4,19 @@
 # Full clean install of JupyterLab + two C kernels.
 # Run from the project root:
 #
-#   cd ~/Projects/imgPrcsngC
+#   cd ~/Projects/Programming/imgPrcsng
 #   bash Jupyter_c_kernels.sh
 #
 # Layout
 # ──────────────────────────────────────────────────────────────────────────────
-#   imgPrcsngC/
+#   imgPrcsng/
 #   ├── CMakeLists.txt
 #   ├── Jupyter_c_kernels.sh     ← this file
 #   ├── install_kernel.sh
 #   ├── include/
 #   ├── src/
 #   └── build/
-#       ├── libimgproc_lib.a
+#       ├── libimgproc_core.a
 #       ├── imgPrcsng
 #       └── kernel/
 #           ├── kernel.py.in     template  (edit this one)
@@ -38,9 +38,30 @@ fi
 
 set -euo pipefail
 
+usage() {
+    echo "Usage: bash Jupyter_c_kernels.sh [--make | --ninja]"
+    echo ""
+    echo "  --make   Force Unix Makefiles generator"
+    echo "  --ninja  Force Ninja generator (default when ninja is installed)"
+    echo ""
+    echo "If no flag is given, Ninja is used when available, Make otherwise."
+    exit 0
+}
+
 main() {
 
 export DEBIAN_FRONTEND=noninteractive
+
+# ── parse arguments ───────────────────────────────────────────────────────────
+FORCE_GENERATOR=""
+for arg in "$@"; do
+    case "$arg" in
+        --make)  FORCE_GENERATOR="Unix Makefiles" ;;
+        --ninja) FORCE_GENERATOR="Ninja" ;;
+        --help|-h) usage ;;
+        *) echo "ERROR: Unknown argument: $arg"; usage ;;
+    esac
+done
 
 # ── self-locate ───────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,7 +73,20 @@ KERNEL_DIR="$IMGPROC_BUILD_DIR/kernel"
 KERNEL_STUB_DIR="$HOME/.local/share/jupyter/kernels/c_imgproc"
 IMGPROC_INCLUDE_DIR="$IMGPROC_SOURCE_DIR/include"
 IMGPROC_SRC_DIR="$IMGPROC_SOURCE_DIR/src"
-IMGPROC_LIB="$IMGPROC_BUILD_DIR/libimgproc_lib.a"
+IMGPROC_LIB="$IMGPROC_BUILD_DIR/libimgproc_core.a"
+
+# ── build tool detection ──────────────────────────────────────────────────────
+# Use forced generator if provided, otherwise prefer Ninja, fall back to Make.
+if [[ -n "$FORCE_GENERATOR" ]]; then
+    CMAKE_GENERATOR="$FORCE_GENERATOR"
+    echo "Build tool : $CMAKE_GENERATOR (forced via flag)"
+elif command -v ninja &>/dev/null; then
+    CMAKE_GENERATOR="Ninja"
+    echo "Build tool : ninja ($(ninja --version))  — pass --make to use Make instead"
+else
+    CMAKE_GENERATOR="Unix Makefiles"
+    echo "Build tool : make (ninja not found)"
+fi
 
 echo "Source dir : $IMGPROC_SOURCE_DIR"
 echo "Build dir  : $IMGPROC_BUILD_DIR"
@@ -122,7 +156,21 @@ sudo apt-get install -y --no-install-recommends \
     gnuplot \
     pkg-config \
     python3-dev \
-    ninja-build pipx
+    pipx
+
+# Install ninja if available in the package repo; non-fatal if absent
+sudo apt-get install -y --no-install-recommends ninja-build 2>/dev/null || true
+
+# Re-evaluate build tool after apt run unless a generator was forced
+if [[ -z "$FORCE_GENERATOR" ]]; then
+    if command -v ninja &>/dev/null; then
+        CMAKE_GENERATOR="Ninja"
+        echo "Build tool : ninja ($(ninja --version))  — pass --make to use Make instead"
+    else
+        CMAKE_GENERATOR="Unix Makefiles"
+        echo "Build tool : make (ninja unavailable, using make)"
+    fi
+fi
 
 pipx ensurepath --force
 export PATH="$HOME/.local/bin:$PATH"
@@ -184,7 +232,6 @@ echo "  Generic C kernel: $GENERIC_C_KERNEL_DIR"
 [[ -f "$IMGPROC_SOURCE_DIR/CMakeLists.txt" ]] \
     || { echo "ERROR: CMakeLists.txt not found at $IMGPROC_SOURCE_DIR"; return 1; }
 
-# Verify templates exist in build/kernel/ before configuring
 [[ -f "$KERNEL_SRC/kernel.py.in" ]] \
     || { echo "ERROR: $KERNEL_SRC/kernel.py.in not found."; \
          echo "       Place kernel.py.in and kernel.json.in in $KERNEL_SRC/"; \
@@ -192,13 +239,15 @@ echo "  Generic C kernel: $GENERIC_C_KERNEL_DIR"
 [[ -f "$KERNEL_SRC/kernel.json.in" ]] \
     || { echo "ERROR: $KERNEL_SRC/kernel.json.in not found."; return 1; }
 
-# ── generate kernel files from .in templates (sed, not cmake) ─────────────
-# configure_file was removed from CMakeLists.txt because writing into
-# build/ during cmake configure updated the directory mtime and caused
-# ninja to loop infinitely ("manifest still dirty after 100 tries").
-echo "--- Generating kernel files ---"
+# ── wipe stale build directory before configuring ─────────────────────────
+echo "--- Cleaning build directory ---"
+rm -rf "$IMGPROC_BUILD_DIR"
 mkdir -p "$KERNEL_DIR"
 
+# ── generate kernel files from .in templates (sed, not cmake) ─────────────
+# Done after clean so there is only one generation pass and the files
+# are never wiped by the rm -rf above.
+echo "--- Generating kernel files ---"
 sed \
     -e "s|@IMGPROC_INCLUDE_DIR@|$IMGPROC_INCLUDE_DIR|g" \
     -e "s|@IMGPROC_SRC_DIR@|$IMGPROC_SRC_DIR|g" \
@@ -212,24 +261,28 @@ sed \
     "$KERNEL_SRC/kernel.json.in" > "$KERNEL_DIR/kernel.json"
 echo "  Written: $KERNEL_DIR/kernel.json"
 
-echo "--- Configuring imgPrcsng ---"
+# ── copy stub immediately after generation, before build ──────────────────
+# The stub only contains paths — it does not depend on the compiled library.
+# Copying here means the kernel is visible to Jupyter/VS Code even if the
+# build fails later, and re-running the script after fixing a build error
+# does not require a separate manual copy step.
+echo "--- Installing stub ---"
+mkdir -p "$KERNEL_STUB_DIR"
+cp "$KERNEL_DIR/kernel.json" "$KERNEL_STUB_DIR/kernel.json"
+echo "  Copied: $KERNEL_STUB_DIR/kernel.json"
+
+echo "--- Configuring imgPrcsng (generator: $CMAKE_GENERATOR) ---"
 cmake -S "$IMGPROC_SOURCE_DIR" -B "$IMGPROC_BUILD_DIR" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DPIPX_PYTHON="$PIPX_PYTHON" \
-    -GNinja
+    -G "$CMAKE_GENERATOR"
 
-echo "--- Building imgproc_lib ---"
-cmake --build "$IMGPROC_BUILD_DIR" --target imgproc_lib
+echo "--- Building imgproc_core ---"
+cmake --build "$IMGPROC_BUILD_DIR" --target imgproc_core
 
 [[ -f "$IMGPROC_LIB" ]] \
     || { echo "ERROR: $IMGPROC_LIB not found after build."; return 1; }
 echo "  Built: $IMGPROC_LIB"
-
-    # Copy stub directly -- don't rely on cmake POST_BUILD
-    echo "--- Installing stub ---"
-    mkdir -p "$KERNEL_STUB_DIR"
-    cp "$KERNEL_DIR/kernel.json" "$KERNEL_STUB_DIR/kernel.json"
-    echo "  Copied: $KERNEL_STUB_DIR/kernel.json"
 
 # ── 6. verify ─────────────────────────────────────────────────────────────────
 echo "--- Verifying kernel files ---"
@@ -325,9 +378,9 @@ EOF
       "problemMatcher": "\$gcc"
     },
     {
-      "label": "cmake: build imgproc_lib",
+      "label": "cmake: build imgproc_core",
       "type": "shell",
-      "command": "cmake --build $IMGPROC_BUILD_DIR --target imgproc_lib",
+      "command": "cmake --build $IMGPROC_BUILD_DIR --target imgproc_core",
       "group": "build",
       "presentation": { "reveal": "silent", "panel": "shared" },
       "problemMatcher": "\$gcc"
@@ -376,14 +429,60 @@ echo "  $KERNEL_DIR/kernel.json      (generated)"
 echo "  $KERNEL_DIR/_shims/          (written at first kernel launch)"
 echo "  $KERNEL_STUB_DIR/kernel.json (stub)"
 echo ""
-echo "Done.  Start JupyterLab:  jupyter lab"
+echo "════════════════════════════════════════"
+echo " PATH setup"
+echo "════════════════════════════════════════"
+
+# Ensure ~/.local/bin is in .bashrc (idempotent)
+if ! grep -q 'local/bin' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    echo "  Added ~/.local/bin to ~/.bashrc"
+fi
+
+# Also patch .zshrc if zsh is present
+if command -v zsh &>/dev/null && [[ -f "$HOME/.zshrc" ]]; then
+    if ! grep -q 'local/bin' "$HOME/.zshrc" 2>/dev/null; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+        echo "  Added ~/.local/bin to ~/.zshrc"
+    fi
+fi
+
+# Create a system-wide symlink so 'jupyter' works immediately in any
+# terminal without requiring the user to source .bashrc or open a new shell.
+# /usr/local/bin is on PATH by default on all Debian/Ubuntu systems.
+JUPYTER_BIN="$PIPX_BIN_DIR/jupyter"
+if [[ -x "$JUPYTER_BIN" ]]; then
+    sudo ln -sf "$JUPYTER_BIN" /usr/local/bin/jupyter
+    echo "  Symlinked: /usr/local/bin/jupyter -> $JUPYTER_BIN"
+else
+    echo "  WARNING: jupyter not found at $JUPYTER_BIN — symlink not created"
+fi
+
+echo ""
+echo "════════════════════════════════════════"
+echo " Registered kernels"
+echo "════════════════════════════════════════"
+jupyter kernelspec list
+
+echo ""
+echo "File layout:"
+echo "  $KERNEL_DIR/kernel.py.in     (template — edit this)"
+echo "  $KERNEL_DIR/kernel.json.in   (template)"
+echo "  $KERNEL_DIR/kernel.py        (generated)"
+echo "  $KERNEL_DIR/kernel.json      (generated)"
+echo "  $KERNEL_DIR/_shims/          (written at first kernel launch)"
+echo "  $KERNEL_STUB_DIR/kernel.json (stub)"
+echo ""
+echo "Done.  Start JupyterLab:"
+echo "    jupyter lab"
 echo ""
 echo "To update the kernel after editing kernel.py.in:"
-echo "  bash install_kernel.sh"
+echo "    bash install_kernel.sh"
 
 } # end main()
 
 if ! main "$@"; then
+
     echo ""
     echo "Installation failed — see the error above."
     exit 1

@@ -5,10 +5,31 @@
 # then copies the stub to the Jupyter kernels directory.
 #
 # Run from the project root:
-#   cd ~/Projects/imgPrcsngC
+#   cd ~/Projects/Programming/imgPrcsng
 #   bash install_kernel.sh
 
 set -euo pipefail
+
+usage() {
+    echo "Usage: bash install_kernel.sh [--make | --ninja]"
+    echo ""
+    echo "  --make   Force Unix Makefiles generator"
+    echo "  --ninja  Force Ninja generator (default when ninja is installed)"
+    echo ""
+    echo "If no flag is given, Ninja is used when available, Make otherwise."
+    exit 0
+}
+
+# ── parse arguments ───────────────────────────────────────────────────────────
+FORCE_GENERATOR=""
+for arg in "$@"; do
+    case "$arg" in
+        --make)  FORCE_GENERATOR="Unix Makefiles" ;;
+        --ninja) FORCE_GENERATOR="Ninja" ;;
+        --help|-h) usage ;;
+        *) echo "ERROR: Unknown argument: $arg"; usage ;;
+    esac
+done
 
 # ── self-locate ───────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,7 +38,7 @@ IMGPROC_SOURCE_DIR="$SCRIPT_DIR"
 IMGPROC_BUILD_DIR="$IMGPROC_SOURCE_DIR/build"
 IMGPROC_INCLUDE_DIR="$IMGPROC_SOURCE_DIR/include"
 IMGPROC_SRC_DIR="$IMGPROC_SOURCE_DIR/src"
-IMGPROC_LIB="$IMGPROC_BUILD_DIR/libimgproc_lib.a"
+IMGPROC_LIB="$IMGPROC_BUILD_DIR/libimgproc_core.a"
 
 KERNEL_SRC="$IMGPROC_SOURCE_DIR/kernel"
 KERNEL_DIR="$IMGPROC_BUILD_DIR/kernel"
@@ -56,10 +77,19 @@ find_pipx_python() {
 PIPX_PYTHON="$(find_pipx_python)"
 echo "Python     : $PIPX_PYTHON"
 
+# ── build tool detection ──────────────────────────────────────────────────────
+if [[ -n "$FORCE_GENERATOR" ]]; then
+    CMAKE_GENERATOR="$FORCE_GENERATOR"
+    echo "Build tool : $CMAKE_GENERATOR (forced via flag)"
+elif command -v ninja &>/dev/null; then
+    CMAKE_GENERATOR="Ninja"
+    echo "Build tool : ninja ($(ninja --version))  — pass --make to use Make instead"
+else
+    CMAKE_GENERATOR="Unix Makefiles"
+    echo "Build tool : make (ninja not found)"
+fi
+
 # ── 1. substitute paths into kernel files ────────────────────────────────────
-# cmake no longer does this (configure_file caused an infinite reconfigure
-# loop by writing into build/ during every cmake run).
-# sed does the @PLACEHOLDER@ substitution here instead.
 echo "--- Generating kernel files ---"
 mkdir -p "$KERNEL_DIR"
 
@@ -76,21 +106,27 @@ sed \
     "$KERNEL_SRC/kernel.json.in" > "$KERNEL_DIR/kernel.json"
 echo "  Written: $KERNEL_DIR/kernel.json"
 
-# ── 2. cmake configure ────────────────────────────────────────────────────────
-echo "--- Configuring ---"
-cmake -S "$IMGPROC_SOURCE_DIR" -B "$IMGPROC_BUILD_DIR" \
-    -DPIPX_PYTHON="$PIPX_PYTHON" \
-    -GNinja
-
-# ── 3. build ──────────────────────────────────────────────────────────────────
-echo "--- Building imgproc_lib ---"
-cmake --build "$IMGPROC_BUILD_DIR" --target imgproc_lib
-
-# ── 4. copy stub directly (don't rely on cmake POST_BUILD) ────────────────────
+# ── 2. copy stub before build ─────────────────────────────────────────────────
+# The stub only contains paths — it does not depend on the compiled library.
+# Copying here means the kernel is always registered even if the build fails.
 echo "--- Installing stub ---"
 mkdir -p "$KERNEL_STUB_DIR"
 cp "$KERNEL_DIR/kernel.json" "$KERNEL_STUB_DIR/kernel.json"
 echo "  Copied: $KERNEL_STUB_DIR/kernel.json"
+
+# ── 3. cmake configure ────────────────────────────────────────────────────────
+echo "--- Configuring (generator: $CMAKE_GENERATOR) ---"
+cmake -S "$IMGPROC_SOURCE_DIR" -B "$IMGPROC_BUILD_DIR" \
+    -DPIPX_PYTHON="$PIPX_PYTHON" \
+    -G "$CMAKE_GENERATOR"
+
+# ── 4. build ──────────────────────────────────────────────────────────────────
+echo "--- Building imgproc_core ---"
+cmake --build "$IMGPROC_BUILD_DIR" --target imgproc_core
+
+[[ -f "$IMGPROC_LIB" ]] \
+    || { echo "ERROR: $IMGPROC_LIB not found after build."; exit 1; }
+echo "  Built: $IMGPROC_LIB"
 
 # ── 5. verify ─────────────────────────────────────────────────────────────────
 echo ""

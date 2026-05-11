@@ -1,7 +1,7 @@
 {
   "cmake.configureArgs": [
-    "-DPIPX_PYTHON=/home/ahrgm/.local/share/pipx/venvs/jupyterlab/bin/python"
+    "-DPIPX_PYTHON=/home/argm/.local/share/pipx/venvs/jupyterlab/bin/python"
   ],
-  "cmake.buildDirectory": "/home/ahrgm/Projects/imgPrcsngC/build",
-  "C_Cpp.default.compileCommands": "/home/ahrgm/Projects/imgPrcsngC/build/compile_commands.json"
+  "cmake.buildDirectory": "/home/argm/Projects/Programming/imgPrcsng/build",
+  "C_Cpp.default.compileCommands": "/home/argm/Projects/Programming/imgPrcsng/build/compile_commands.json"
 }
