@@ -1,4 +1,4 @@
-C kernel for Image Processing with GNUPlot that works in Jupyterlab and VSCode.
+C kernel for Image Processing with GNUPlot that works with Jupyterlab in VSCode.
 
 
 run Jupyter_c_kernels.sh in the root of project folder to build jupyter kernels.
